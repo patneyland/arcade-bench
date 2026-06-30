@@ -1,71 +1,49 @@
-// Auth abstraction — structured so Clerk (the production target per PLAN.md) or
-// Auth.js can drop in behind these functions. In dev, a cookie-based mock lets the
-// whole vote loop run with zero external credentials.
+// Auth provider — Clerk (the production target per PLAN.md) is now the source of truth.
+// Clerk owns sign-in/sign-up (hosted components at /sign-in, /sign-up) and the session;
+// here we map the stable Clerk user id onto our User.authId (find-or-create) and return
+// the same SessionUser shape, so everything downstream (lib/data, app/api) is unchanged.
 //
-// CONTRACT: getSessionUser() / requireGrader() signatures are stable. This file
-// implements the DEV provider. To go to production, swap the bodies marked
-// `=== CLERK SEAM ===` for Clerk's `auth()` / `currentUser()` — everything downstream
-// (lib/data, app/api) only depends on getSessionUser() returning a SessionUser.
-//
-// The dev session is a simple signed cookie `ab_session` carrying a stable authId. It is
-// NOT cryptographically strong auth — it exists purely so votes can be attributed to a
-// consistent identity in local dev. Real trust comes from Clerk in production.
+// CONTRACT: getSessionUser() / requireGrader() signatures are stable. There is no dev
+// cookie + no /api/auth/* sign-in routes anymore — auth state flows from Clerk's
+// middleware (see middleware.ts) and is read here via auth() / currentUser().
 
-import { cookies } from "next/headers";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import type { User } from "@prisma/client";
 import { prisma } from "./db";
 import type { SessionUser } from "./types";
 
-const COOKIE_NAME = "ab_session";
-const DEV_PROVIDER = "dev";
-// A throwaway secret for signing the dev cookie. Override via env in shared dev setups.
-const DEV_SECRET = process.env.AB_DEV_SECRET ?? "arcade-bench-dev-secret";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
-
-function sign(authId: string): string {
-  const mac = createHmac("sha256", DEV_SECRET).update(authId).digest("base64url");
-  return `${authId}.${mac}`;
-}
-
-/** Verify a signed cookie value, returning the authId or null if tampered/invalid. */
-function verify(value: string | undefined): string | null {
-  if (!value) return null;
-  const idx = value.lastIndexOf(".");
-  if (idx <= 0) return null;
-  const authId = value.slice(0, idx);
-  const provided = value.slice(idx + 1);
-  const expected = createHmac("sha256", DEV_SECRET).update(authId).digest("base64url");
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-  return authId;
-}
+type ClerkUser = Awaited<ReturnType<typeof currentUser>>;
 
 /**
  * Returns the current grader, or null if anonymous.
- * === CLERK SEAM === In production, read Clerk's session here instead of the cookie,
- * map the Clerk user id -> authId, and keep the same find-or-create + voteCount shape.
+ * Maps the Clerk user id -> User.authId (find-or-create), preserving voteCount.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const store = await cookies();
-  const authId = verify(store.get(COOKIE_NAME)?.value);
-  if (!authId) return null;
+  const { userId } = await auth();
+  if (!userId) return null;
 
-  // Find-or-create the User row keyed by the stable authId.
-  const user = await prisma.user.upsert({
-    where: { authId },
-    update: {},
-    create: { authId, provider: DEV_PROVIDER, handle: deriveHandle(authId) },
+  // Fast path: a grader we've already seen. This avoids a Clerk profile fetch on the hot
+  // path — getSessionUser runs on every authenticated request (Nav session poll + each vote).
+  const existing = await prisma.user.findUnique({
+    where: { authId: userId },
     include: { _count: { select: { votes: true } } },
   });
+  if (existing) return toSessionUser(existing, existing._count.votes);
 
-  return {
-    id: user.id,
-    handle: user.handle,
-    provider: user.provider,
-    voteCount: user._count.votes,
-  };
+  // First time we've seen this Clerk user: fetch the profile once to seed handle/provider,
+  // then upsert (not create) so two concurrent first-requests can't collide on authId.
+  const clerkUser = await currentUser();
+  const created = await prisma.user.upsert({
+    where: { authId: userId },
+    update: {},
+    create: {
+      authId: userId,
+      provider: deriveProvider(clerkUser),
+      handle: deriveHandle(clerkUser, userId),
+    },
+    include: { _count: { select: { votes: true } } },
+  });
+  return toSessionUser(created, created._count.votes);
 }
 
 /** Voting gate. Returns the grader or null; callers reject the vote when null. */
@@ -73,43 +51,22 @@ export async function requireGrader(): Promise<SessionUser | null> {
   return getSessionUser();
 }
 
-/**
- * Dev sign-in: create or find a `dev` User and set the signed cookie.
- * Must be called from a Route Handler / Server Action (it writes a cookie).
- */
-export async function signInDev(handle?: string): Promise<SessionUser> {
-  const authId = `dev_${randomBytes(8).toString("hex")}`;
-  const resolvedHandle = handle?.trim() || deriveHandle(authId);
-
-  const user = await prisma.user.create({
-    data: { authId, provider: DEV_PROVIDER, handle: resolvedHandle },
-    include: { _count: { select: { votes: true } } },
-  });
-
-  const store = await cookies();
-  store.set(COOKIE_NAME, sign(authId), {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-    secure: process.env.NODE_ENV === "production",
-  });
-
-  return {
-    id: user.id,
-    handle: user.handle,
-    provider: user.provider,
-    voteCount: user._count.votes,
-  };
+function toSessionUser(user: User, voteCount: number): SessionUser {
+  return { id: user.id, handle: user.handle, provider: user.provider, voteCount };
 }
 
-/** Clear the dev session cookie. */
-export async function signOutDev(): Promise<void> {
-  const store = await cookies();
-  store.delete(COOKIE_NAME);
+/** Map a Clerk external-account provider ("oauth_google") onto our short label (github | google). */
+function deriveProvider(user: ClerkUser): string {
+  const ext = user?.externalAccounts?.[0]?.provider; // e.g. "oauth_google"
+  if (ext) return ext.replace(/^oauth_/, "");
+  return "clerk";
 }
 
-function deriveHandle(authId: string): string {
-  const suffix = authId.replace(/^dev_/, "").slice(0, 6);
-  return `grader-${suffix}`;
+/** A human-friendly handle: Clerk username -> email local-part -> first name -> id suffix. */
+function deriveHandle(user: ClerkUser, userId: string): string {
+  if (user?.username) return user.username;
+  const email = user?.emailAddresses?.[0]?.emailAddress;
+  if (email) return email.split("@")[0];
+  if (user?.firstName) return user.firstName;
+  return `grader-${userId.slice(-6)}`;
 }

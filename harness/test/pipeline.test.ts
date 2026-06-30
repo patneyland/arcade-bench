@@ -122,6 +122,33 @@ describe("runGeneration", () => {
     expect(manifest[0]!.status).toBe("broken");
   });
 
+  it("status=no-html-found when the model call throws (batch must not abort)", async () => {
+    const logs: string[] = [];
+    const records = await runGeneration({
+      game: GAME,
+      model: MODEL,
+      samples: 1,
+      onLog: (m) => logs.push(m),
+      deps: {
+        callModel: async () => {
+          throw new Error("404 No endpoints found for some/model");
+        },
+        smokeTest: async () => ({ ok: true }), // should not be consulted
+        storeArtifact: tempStore(),
+      },
+    });
+
+    // The failure is recorded (competes and loses), not thrown.
+    expect(records).toHaveLength(1);
+    expect(records[0]!.status).toBe("no-html-found");
+    expect(records[0]!.artifactPath).toBeNull();
+    expect(records[0]!.cost).toBe(0);
+    expect(logs.some((l) => l.includes("call failed") && l.includes("404"))).toBe(true);
+
+    const manifest = await readManifest(manifestPath);
+    expect(manifest[0]!.status).toBe("no-html-found");
+  });
+
   it("runs N samples and calls store for each", async () => {
     let storeCalls = 0;
     const records = await runGeneration({

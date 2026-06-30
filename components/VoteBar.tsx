@@ -7,12 +7,14 @@
 //
 // On click → POST /api/vote { gameId, genAId, genBId, winner }. On success the two
 // model identities are revealed (badges). If the user is not signed in the response
-// is { error: "unauthenticated" } — we prompt a dev sign-in, then retry the vote.
+// is { error: "unauthenticated" } — we surface a Clerk sign-in prompt, and once the user
+// signs in the pending vote is retried automatically.
 // "Next match" loads a fresh pairing via GET /api/arena/next?game=<slug>.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
+import { SignInButton, useUser } from "@clerk/nextjs";
 import type { ArenaPairing, ModelView, RecordVoteResult, VoteWinner } from "@/lib/types";
 import { VendorBadge, ParamChip, CostChip } from "./Badges";
 
@@ -26,11 +28,23 @@ type Reveal = { a: ModelView; b: ModelView };
 
 export function VoteBar({ pairing, onNext }: VoteBarProps) {
   const router = useRouter();
+  const { isSignedIn } = useUser();
   const [pending, setPending] = useState<VoteWinner | null>(null);
   const [castWinner, setCastWinner] = useState<VoteWinner | null>(null);
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
+
+  // When the user completes Clerk sign-in from the prompt below, retry the vote they
+  // were trying to cast — so signing in feels continuous with voting.
+  useEffect(() => {
+    if (isSignedIn && needsSignIn && castWinner) {
+      setNeedsSignIn(false);
+      void castVote(castWinner);
+    }
+    // castVote is stable for this purpose; we only want to react to the sign-in transition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn]);
 
   async function castVote(winner: VoteWinner) {
     setError(null);
@@ -63,16 +77,6 @@ export function VoteBar({ pairing, onNext }: VoteBarProps) {
     }
   }
 
-  async function devSignInAndRetry(winner: VoteWinner) {
-    try {
-      await fetch("/api/auth/dev-signin", { method: "POST" });
-      setNeedsSignIn(false);
-      await castVote(winner);
-    } catch {
-      setError("Sign-in failed. Try again.");
-    }
-  }
-
   async function loadNext() {
     try {
       const res = await fetch(`/api/arena/next?game=${encodeURIComponent(pairing.game.slug)}`);
@@ -99,12 +103,11 @@ export function VoteBar({ pairing, onNext }: VoteBarProps) {
       {needsSignIn && (
         <div className="mb-4 rounded-chip border-2 border-ink bg-yellow/30 px-4 py-3 font-sans text-sm">
           You need to sign in to vote.{" "}
-          <button
-            className="font-grotesk font-semibold underline underline-offset-2"
-            onClick={() => devSignInAndRetry((castWinner ?? "a") as VoteWinner)}
-          >
-            Sign in (dev) and record this vote
-          </button>
+          <SignInButton mode="modal">
+            <button className="font-grotesk font-semibold underline underline-offset-2">
+              Sign in and record this vote
+            </button>
+          </SignInButton>
         </div>
       )}
       {error && (

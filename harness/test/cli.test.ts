@@ -48,7 +48,7 @@ describe("loadConfig (canonical manifest)", () => {
       "gemini-flash-lite",
       "gpt-4-1-nano",
       "deepseek-v3",
-      "qwen3-4b",
+      "qwen3-8b",
       "gemma-3-4b",
       "ministral-8b",
     ]);
@@ -56,8 +56,8 @@ describe("loadConfig (canonical manifest)", () => {
     expect(byId["gemini-flash-lite"]).toBe("google/gemini-2.5-flash-lite");
     expect(byId["gpt-4-1-nano"]).toBe("openai/gpt-4.1-nano");
     expect(byId["deepseek-v3"]).toBe("deepseek/deepseek-chat");
-    expect(byId["qwen3-4b"]).toBe("qwen/qwen3-4b");
+    expect(byId["qwen3-8b"]).toBe("qwen/qwen3-8b");
     expect(byId["gemma-3-4b"]).toBe("google/gemma-3-4b-it");
-    expect(byId["ministral-8b"]).toBe("mistralai/ministral-8b");
+    expect(byId["ministral-8b"]).toBe("mistralai/ministral-8b-2512");
   });
 });

@@ -63,13 +63,23 @@ export async function runGeneration(params: RunGenerationParams): Promise<Artifa
   for (let sampleIndex = 0; sampleIndex < samples; sampleIndex++) {
     log(`[${model.slug}/${game.slug}] sample ${sampleIndex}: calling model`);
 
-    const call = await deps.callModel({
-      openrouterId: model.openrouterId,
-      prompt,
-      maxTokens,
-      promptPriceUsd: model.promptPriceUsd,
-      completionPriceUsd: model.completionPriceUsd,
-    });
+    // A call failure (API error, model unavailable, timeout) must not abort the batch:
+    // the entry yields no HTML, so it is recorded as no-html-found and competes/loses
+    // per the PRD ("non-running entries still compete, never hidden").
+    let call;
+    try {
+      call = await deps.callModel({
+        openrouterId: model.openrouterId,
+        prompt,
+        maxTokens,
+        promptPriceUsd: model.promptPriceUsd,
+        completionPriceUsd: model.completionPriceUsd,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      log(`[${model.slug}/${game.slug}] sample ${sampleIndex}: call failed — ${message}`);
+      call = { text: "", tokensIn: 0, tokensOut: 0, costUsd: 0 };
+    }
 
     const html = deps.extractHtml(call.text);
 

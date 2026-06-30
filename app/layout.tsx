@@ -1,3 +1,4 @@
+import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import {
   Inter,
@@ -40,9 +41,11 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${pressStart.variable} font-sans antialiased`}
       >
-        <Nav />
-        {children}
-        <Footer />
+        <ClerkProvider>
+          <Nav />
+          {children}
+          <Footer />
+        </ClerkProvider>
       </body>
     </html>
   );

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Classic Pong</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background-color: #000;
+            border: 2px solid #444;
+            overflow: hidden;
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        #paddle {
+            position: absolute;
+            width: 15px;
+            height: 80px;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+
+        #ball {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background-color: #fff;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score">0 - 0</div>
+        <div id="paddle-left" id="paddle"></div>
+        <div id="paddle-right" id="paddle"></div>
+        <div id="ball"></div>
+        <div id="instructions">Use W/S (left) and Up/Down (right) to move paddles</div>
+    </div>
+
+    <script>
+        // Game elements
+        const gameContainer = document.getElementById('game-container');
+        const leftPaddle = document.getElementById('paddle-left');
+        const rightPaddle = document.getElementById('paddle-right');
+        const ball = document.getElementById('ball');
+        const scoreDisplay = document.getElementById('score');
+
+        // Game state
+        let leftScore = 0;
+        let rightScore = 0;
+        let gameSpeed = 5;
+        let gameRunning = true;
+
+        // Initialize game
+        function init() {
+            // Set initial positions
+            leftPaddle.style.left = '20px';
+            rightPaddle.style.left = '565px';
+            ball.style.left = '297.5px';
+            ball.style.top = '175px';
+
+            // Set paddle positions to middle
+            leftPaddle.style.top = '110px';
+            rightPaddle.style.top = '110px';
+
+            // Reset ball position and speed
+            resetBall();
+
+            // Start game loop
+            gameLoop();
+        }
+
+        // Reset ball to center
+        function resetBall() {
+            ball.style.left = '297.5px';
+            ball.style.top = '175px';
+
+            // Random initial direction
+            const angle = Math.random() * Math.PI / 4 - Math.PI / 8;
+            const speed = gameSpeed * 1.5;
+
+            ball.style.transition = 'none';
+            ball.style.transform = `translate(${Math.cos(angle) * 100}px, ${Math.sin(angle) * 100}px)`;
+            ball.style.transition = `transform ${1000 / speed}ms linear`;
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // Move paddles based on keyboard input
+            document.addEventListener('keydown', handleKeyDown, { once: true });
+
+            // Check for collisions
+            checkCollisions();
+
+            // Continue the loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Handle keyboard input
+        function handleKeyDown(e) {
+            const paddleHeight = 80;
+            const paddleTop = parseInt(leftPaddle.style.top);
+            const rightPaddleTop = parseInt(rightPaddle.style.top);
+
+            switch(e.key) {
+                case 'w':
+                    if (paddleTop > 0) {
+                        leftPaddle.style.top = `${paddleTop - 10}px`;
+                    }
+                    break;
+                case 's':
+                    if (paddleTop < gameContainer.clientHeight - paddleHeight) {
+                        leftPaddle.style.top = `${paddleTop + 10}px`;
+                    }
+                    break;
+                case 'ArrowUp':
+                    if (rightPaddleTop > 0) {
+                        rightPaddle.style.top = `${rightPaddleTop - 10}px`;
+                    }
+                    break;
+                case 'ArrowDown':
+                    if (rightPaddleTop < gameContainer.clientHeight - paddleHeight) {
+                        rightPaddle.style.top = `${rightPaddleTop + 10}px`;
+                    }
+                    break;
+            }
+
+            // Continue listening for more key presses
+            document.addEventListener('keydown', handleKeyDown, { once: true });
+        }
+
+        // Check for collisions
+        function checkCollisions() {
+            const ballRect = ball.getBoundingClientRect();
+            const leftPaddleRect = leftPaddle.getBoundingClientRect();
+            const rightPaddleRect = rightPaddle.getBoundingClientRect();
+
+            // Ball hits left wall
+            if (ballRect.left <= 0) {
+                rightScore++;
+                updateScore();
+                resetBall();
+                gameSpeed = Math.min(gameSpeed + 0.2, 10);
+            }
+            // Ball hits right wall
+            else if (ballRect.right >= gameContainer.clientWidth) {
+                leftScore++;
+                updateScore();
+                resetBall();
+                gameSpeed = Math.min(gameSpeed + 0.2, 10);
+            }
+            // Ball hits top or bottom
+            else if (ballRect.top <= 0 || ballRect.bottom >= gameContainer.clientHeight) {
+                ball.style.transform = `translateY(${ballRect.top > gameContainer.clientHeight / 2 ? -1 : 1}px)`;
+            }
+            // Ball hits left paddle
+            else if (
+                ballRect.right > leftPaddleRect.left &&
+                ballRect.left < leftPaddleRect.right &&
+                ballRect.top < leftPaddleRect.bottom &&
+                ballRect.bottom > leftPaddleRect.top
+            ) {
+                // Add some angle based on where the ball hits the paddle
+                const hitPosition = (ballRect.top - leftPaddleRect.top) / leftPaddleRect.height;
+                const angle = (hitPosition - 0.5) * Math.PI / 6;
+                ball.style.transform = `translate(${Math.cos(angle) * 5}px, ${Math.sin(angle) * 5}px)`;
+            }
+            // Ball hits right paddle
+            else if (
+                ballRect.right > rightPaddleRect.left &&
+                ballRect.left < rightPaddleRect.right &&
+                ballRect.top < rightPaddleRect.bottom &&
+                ballRect.bottom > rightPaddleRect.top
+            ) {
+                // Add some angle based on where the ball hits the paddle
+                const hitPosition = (ballRect.top - rightPaddleRect.top) / rightPaddleRect.height;
+                const angle = (hitPosition - 0.5) * Math.PI / 6;
+                ball.style.transform = `translate(${Math.cos(angle) * -5}px, ${Math.sin(angle) * 5}px)`;
+            }
+        }
+
+        // Update score display
+        function updateScore() {
+            scoreDisplay.textContent = `${leftScore} - ${rightScore}`;
+
+            // Check for winner
+            if (leftScore >= 5 || rightScore >= 5) {
+                gameRunning = false;
+                const winner = leftScore > rightScore ? 'Left Player' : 'Right Player';
+                alert(`${winner} wins! Refresh to play again.`);
+            }
+        }
+
+        // Start the game when the page loads
+        window.onload = init;
+    </script>
+</body>
+</html>

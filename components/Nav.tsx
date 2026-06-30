@@ -2,13 +2,15 @@
 
 // Nav — sticky, cream@86% + backdrop blur, 2px ink bottom border (design.md §8).
 // Left: joystick glyph + `arcade-bench` wordmark (the `-` in blue). Center links.
-// Right: a coin chip with the signed-in user's vote count + a primary Sign in button.
-// Session is wired to GET /api/session, POST /api/auth/dev-signin, /api/auth/signout.
+// Right: a coin chip with the signed-in grader's vote count + Clerk auth controls
+// (Sign in button when signed out, the Clerk UserButton when signed in). The vote count
+// comes from GET /api/session, which resolves the Clerk session via lib/auth.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
+import { Show, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import type { SessionUser } from "@/lib/types";
 import { JoystickIcon } from "./icons";
 
@@ -21,43 +23,27 @@ const LINKS = [
 
 export function Nav() {
   const pathname = usePathname();
+  const { isSignedIn } = useUser();
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function refreshSession() {
-    try {
-      const res = await fetch("/api/session");
-      if (!res.ok) return setUser(null);
-      const data = await res.json();
-      setUser((data?.user ?? data ?? null) as SessionUser | null);
-    } catch {
-      setUser(null);
-    }
-  }
 
   useEffect(() => {
-    refreshSession();
-  }, []);
-
-  async function signIn() {
-    setBusy(true);
-    try {
-      await fetch("/api/auth/dev-signin", { method: "POST" });
-      await refreshSession();
-    } finally {
-      setBusy(false);
+    if (!isSignedIn) {
+      setUser(null);
+      return;
     }
-  }
-
-  async function signOut() {
-    setBusy(true);
-    try {
-      await fetch("/api/auth/signout", { method: "POST" });
-      await refreshSession();
-    } finally {
-      setBusy(false);
-    }
-  }
+    let active = true;
+    fetch("/api/session")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active) setUser((data?.user ?? data ?? null) as SessionUser | null);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isSignedIn]);
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-ink bg-cream/[0.86] backdrop-blur-[8px]">
@@ -90,34 +76,27 @@ export function Nav() {
           })}
         </ul>
 
-        {/* Right: coin chip + sign in / out */}
+        {/* Right: coin chip + Clerk auth controls */}
         <div className="ml-auto flex items-center gap-3">
-          {user && (
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-yellow px-3 py-1 font-mono text-[12px] font-bold text-ink"
-              title="Your votes"
-            >
-              <CoinGlyph />
-              {user.voteCount}
-            </span>
-          )}
-          {user ? (
-            <button
-              className="btn bg-cream-2 px-3 py-2 text-sm shadow-hard-sm"
-              onClick={signOut}
-              disabled={busy}
-            >
-              {user.handle ? `Sign out (${user.handle})` : "Sign out"}
-            </button>
-          ) : (
-            <button
-              className="btn bg-blue px-4 py-2 text-sm text-white shadow-hard-sm hover:bg-blue-deep"
-              onClick={signIn}
-              disabled={busy}
-            >
-              Sign in
-            </button>
-          )}
+          <Show when="signed-in">
+            {user && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink bg-yellow px-3 py-1 font-mono text-[12px] font-bold text-ink"
+                title="Your votes"
+              >
+                <CoinGlyph />
+                {user.voteCount}
+              </span>
+            )}
+            <UserButton />
+          </Show>
+          <Show when="signed-out">
+            <SignInButton mode="modal">
+              <button className="btn bg-blue px-4 py-2 text-sm text-white shadow-hard-sm hover:bg-blue-deep">
+                Sign in
+              </button>
+            </SignInButton>
+          </Show>
         </div>
       </nav>
     </header>

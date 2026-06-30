@@ -7,6 +7,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 
+// Clerk: render signed-out so the unauthenticated prompt path is exercised. SignInButton
+// just renders its child trigger (the modal itself is Clerk's concern, not under test).
+vi.mock("@clerk/nextjs", () => ({
+  useUser: () => ({ isSignedIn: false, isLoaded: true, user: null }),
+  SignInButton: ({ children }: { children: unknown }) => children,
+}));
+
 const pairing: ArenaPairing = {
   game: {
     id: "game-1",

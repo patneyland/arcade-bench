@@ -1,36 +1,28 @@
 // Focused enforcement test for recordVote: unauth / winner validation / cross-game /
 // duplicate / success+reveal. Runs against a throwaway SQLite DB so it never touches the
-// dev/seed data, and mocks `next/headers` cookies to drive the dev auth provider.
+// dev/seed data, and mocks Clerk's server auth() to drive the (Clerk-backed) auth provider.
 
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createHmac } from "node:crypto";
 
 // --- temp DB wiring (must be set BEFORE importing anything that opens Prisma) ---
 const dir = mkdtempSync(join(tmpdir(), "arcade-bench-test-"));
 const dbFile = join(dir, "test.db");
 process.env.DATABASE_URL = `file:${dbFile.replace(/\\/g, "/")}`;
 
-// --- a controllable in-memory cookie store standing in for next/headers ---
-const cookieStore = new Map<string, string>();
-vi.mock("next/headers", () => ({
-  cookies: async () => ({
-    get: (name: string) =>
-      cookieStore.has(name) ? { name, value: cookieStore.get(name)! } : undefined,
-    set: (name: string, value: string) => cookieStore.set(name, value),
-    delete: (name: string) => cookieStore.delete(name),
-  }),
+// --- a controllable Clerk session standing in for @clerk/nextjs/server ---
+// hoisted so the vi.mock factory (which is itself hoisted above imports) can read it.
+const clerkSession = vi.hoisted(() => ({ userId: null as string | null }));
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: async () => ({ userId: clerkSession.userId }),
+  currentUser: async () =>
+    clerkSession.userId
+      ? { id: clerkSession.userId, username: "tester", emailAddresses: [], externalAccounts: [] }
+      : null,
 }));
-
-// Sign a dev cookie the same way lib/auth does (HMAC over the authId).
-const DEV_SECRET = process.env.AB_DEV_SECRET ?? "arcade-bench-dev-secret";
-function signCookie(authId: string): string {
-  const mac = createHmac("sha256", DEV_SECRET).update(authId).digest("base64url");
-  return `${authId}.${mac}`;
-}
 
 // Imported lazily after env + mocks are in place.
 let prisma: typeof import("./db").prisma;
@@ -96,10 +88,10 @@ afterAll(async () => {
 });
 
 function signIn() {
-  cookieStore.set("ab_session", signCookie(AUTH_ID));
+  clerkSession.userId = AUTH_ID;
 }
 function signOut() {
-  cookieStore.clear();
+  clerkSession.userId = null;
 }
 
 describe("recordVote enforcement", () => {

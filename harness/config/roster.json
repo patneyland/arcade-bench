@@ -18,10 +18,10 @@
     "openrouterId": "deepseek/deepseek-chat"
   },
   {
-    "slug": "qwen3-4b",
-    "name": "Qwen3 4B",
+    "slug": "qwen3-8b",
+    "name": "Qwen3 8B",
     "vendor": "Alibaba",
-    "openrouterId": "qwen/qwen3-4b"
+    "openrouterId": "qwen/qwen3-8b"
   },
   {
     "slug": "gemma-3-4b",
@@ -33,6 +33,6 @@
     "slug": "ministral-8b",
     "name": "Ministral 8B",
     "vendor": "Mistral",
-    "openrouterId": "mistralai/ministral-8b"
+    "openrouterId": "mistralai/ministral-8b-2512"
   }
 ]
