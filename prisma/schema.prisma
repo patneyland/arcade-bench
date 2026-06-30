@@ -1,15 +1,14 @@
 // arcade-bench data model.
 //
-// Dev/local uses SQLite for zero-credential, fully-testable runs.
-// Production target is Postgres (Supabase) — switch `provider` to "postgresql"
-// and point DATABASE_URL at Supabase. The schema is written to port cleanly.
+// Postgres (Supabase). Local dev runs against a local Supabase stack (Docker);
+// production points DATABASE_URL at a hosted Supabase project. Same schema either way.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

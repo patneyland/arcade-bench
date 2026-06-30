@@ -5,8 +5,9 @@ classic games. See `PLAN.md`, `PRD.md`, `design.md` for product + visual spec.
 
 ## Stack
 - **Next.js 15 (App Router) + React 19 + TypeScript**, Tailwind v3.
-- **Prisma + SQLite** for local dev (zero credentials, fully testable). Production
-  target is Supabase Postgres — change `prisma/schema.prisma` provider + `DATABASE_URL`.
+- **Prisma + Postgres (Supabase)**. Local dev runs a local Supabase stack via Docker
+  (`npx supabase start`); production points `DATABASE_URL` at a hosted Supabase project.
+  Same schema either way. Supabase Studio (local): http://127.0.0.1:54323.
 - **Vitest** (+ jsdom, Testing Library) for the web app; the harness owns its own test run.
 - **Auth**: dev cookie-mock now; Clerk in production (per PLAN.md). Abstracted in `lib/auth.ts`.
 
@@ -36,7 +37,8 @@ strict `sandbox` iframe (no same-origin, no network) — the one hard security r
 ## Getting started
 ```
 npm install
-npm run setup   # prisma generate + db push + seed
-npm run dev     # http://localhost:3000
-npm test        # web app tests
+npx supabase start   # local Supabase Postgres (Docker); prints the DB URL
+npm run setup        # prisma generate + db push + seed
+npm run dev          # http://localhost:3000
+npm test             # web app tests (vote test uses an isolated PG schema; skips if no DB)
 ```

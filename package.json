@@ -39,6 +39,7 @@
     "jsdom": "^25.0.1",
     "postcss": "^8.5.1",
     "prisma": "^5.22.0",
+    "supabase": "^2.109.0",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
@@ -46,6 +47,7 @@
   },
   "allowScripts": {
     "sharp@0.34.5": true,
-    "@prisma/engines@5.22.0": true
+    "@prisma/engines@5.22.0": true,
+    "supabase@2.109.0": true
   }
 }
