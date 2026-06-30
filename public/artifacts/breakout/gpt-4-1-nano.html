@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Breakout</title>
+<style>
+  body{margin:0;background:#0a0a12;color:#ddd;font-family:Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding-top:22px;}
+  canvas{background:#0B0B12;border:2px solid #1B1A22;}
+  #score{font-family:monospace;font-size:15px;margin:8px 0;}
+  #help{font-size:13px;color:#888;}
+  h3{font-family:monospace;letter-spacing:.2em;color:#2D6CFF;}
+</style>
+</head>
+<body>
+  <h3>BREAKOUT</h3>
+  <div id="score">Score: 0 &nbsp; Lives: 3</div>
+  <canvas id="game" width="480" height="420"></canvas>
+  <div id="help">&larr; &rarr; to move &middot; Space to launch / restart</div>
+<script>
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var W = 480, H = 420;
+
+var rows = 4, cols = 8;
+var bw = 52, bh = 18, pad = 6, offTop = 40, offLeft = 16;
+var colors = ['#FF4D4D','#FFC700','#18B26B','#2D6CFF'];
+var bricks = [];
+
+var paddle = { w: 80, h: 12, x: W/2 - 40, y: H - 28 };
+var ball = { x: W/2, y: H - 44, r: 7, vx: 0, vy: 0 };
+var score = 0, lives = 3;
+var launched = false, over = false, won = false;
+
+var left = false, right = false;
+
+function makeBricks(){
+  bricks = [];
+  for(var r=0;r<rows;r++){
+    for(var c=0;c<cols;c++){
+      bricks.push({ x: offLeft + c*(bw+pad), y: offTop + r*(bh+pad), alive: true, color: colors[r] });
+    }
+  }
+}
+makeBricks();
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'ArrowLeft') left = true;
+  if(e.key === 'ArrowRight') right = true;
+  if(['ArrowLeft','ArrowRight',' '].indexOf(e.key) >= 0) e.preventDefault();
+  if(e.key === ' '){
+    if(over || won){ restart(); }
+    else if(!launched){ ball.vx = 3; ball.vy = -4; launched = true; }
+  }
+});
+document.addEventListener('keyup', function(e){
+  if(e.key === 'ArrowLeft') left = false;
+  if(e.key === 'ArrowRight') right = false;
+});
+
+function restart(){
+  score = 0; lives = 3; over = false; won = false;
+  makeBricks();
+  resetBall();
+}
+function resetBall(){
+  launched = false;
+  paddle.x = W/2 - paddle.w/2;
+  ball.x = paddle.x + paddle.w/2;
+  ball.y = paddle.y - ball.r - 1;
+  ball.vx = 0; ball.vy = 0;
+}
+
+function update(){
+  if(over || won) return;
+  if(left) paddle.x -= 6;
+  if(right) paddle.x += 6;
+  if(paddle.x < 0) paddle.x = 0;
+  if(paddle.x > W - paddle.w) paddle.x = W - paddle.w;
+
+  if(!launched){
+    ball.x = paddle.x + paddle.w/2;
+    return;
+  }
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  if(ball.x - ball.r < 0){ ball.x = ball.r; ball.vx = -ball.vx; }
+  if(ball.x + ball.r > W){ ball.x = W - ball.r; ball.vx = -ball.vx; }
+  if(ball.y - ball.r < 0){ ball.y = ball.r; ball.vy = -ball.vy; }
+
+  if(ball.vy > 0 && ball.y + ball.r >= paddle.y &&
+     ball.x >= paddle.x && ball.x <= paddle.x + paddle.w){
+    ball.vy = -Math.abs(ball.vy);
+    var rel = (ball.x - (paddle.x + paddle.w/2)) / (paddle.w/2);
+    ball.vx = rel * 4;
+  }
+
+  for(var i=0;i<bricks.length;i++){
+    var b = bricks[i];
+    if(!b.alive) continue;
+    if(ball.x > b.x && ball.x < b.x + bw && ball.y - ball.r < b.y + bh && ball.y + ball.r > b.y){
+      b.alive = false;
+      score += 10;
+      ball.vy = -ball.vy;
+      break;
+    }
+  }
+
+  if(ball.y - ball.r > H){
+    lives--;
+    if(lives <= 0) over = true;
+    else resetBall();
+  }
+
+  var anyAlive = false;
+  for(var j=0;j<bricks.length;j++){ if(bricks[j].alive) anyAlive = true; }
+  if(!anyAlive) won = true;
+
+  document.getElementById('score').innerHTML = 'Score: ' + score + ' &nbsp; Lives: ' + lives;
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  for(var i=0;i<bricks.length;i++){
+    var b = bricks[i];
+    if(!b.alive) continue;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x, b.y, bw, bh);
+  }
+  ctx.fillStyle = '#e8e8f0';
+  ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+  ctx.fillStyle = '#FFC700';
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.textAlign = 'center';
+  if(!launched && !over && !won){
+    ctx.fillStyle = '#bbb';
+    ctx.font = '15px Arial';
+    ctx.fillText('Press Space to launch', W/2, H - 60);
+  }
+  if(over){
+    ctx.fillStyle = '#FF4D4D';
+    ctx.font = '24px Arial';
+    ctx.fillText('Game Over - Press Space', W/2, H/2);
+  }
+  if(won){
+    ctx.fillStyle = '#18B26B';
+    ctx.font = '24px Arial';
+    ctx.fillText('You Win! - Press Space', W/2, H/2);
+  }
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

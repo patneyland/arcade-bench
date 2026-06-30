@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>breakout</title>
+<style>
+  body { background:black; color:white; font-family:sans-serif; text-align:center; }
+  canvas { background:#0B0B12; border:1px solid grey; }
+  p { font-size:12px; color:#777; }
+</style>
+</head>
+<body>
+<h4>BREAKOUT</h4>
+<canvas id="canvas" width="440" height="380"></canvas>
+<p>Left / Right arrows to move, Space to launch</p>
+<script>
+var c = document.getElementById("canvas");
+var x = c.getContext("2d");
+
+var px = 180;
+var pw = 70;
+var bx = 215, by = 300;
+var vx = 3, vy = -3;
+var go = false;
+
+var bricks = [];
+for(var i=0;i<5;i++){
+  for(var j=0;j<8;j++){
+    bricks.push({ x: 10 + j*52, y: 30 + i*22, on: true });
+  }
+}
+
+var lf=false, rt=false;
+document.addEventListener("keydown", function(e){
+  if(e.key=="ArrowLeft") lf=true;
+  if(e.key=="ArrowRight") rt=true;
+  if(e.key==" ") go=true;
+});
+document.addEventListener("keyup", function(e){
+  if(e.key=="ArrowLeft") lf=false;
+  if(e.key=="ArrowRight") rt=false;
+});
+
+function frame(){
+  if(lf) px -= 6;
+  if(rt) px += 6;
+
+  if(go){
+    bx += vx;
+    by += vy;
+  }
+
+  // walls - right wall check uses wrong width so ball pokes off edge sometimes
+  if(bx < 0) vx = 3;
+  if(bx > 440) vx = -3;
+  if(by < 0) vy = 3;
+
+  // paddle - loose check, ball can pass through corner
+  if(by > 350 && bx > px && bx < px + pw){
+    vy = -3;
+  }
+
+  // if ball falls off bottom it just respawns, no lives, no game over
+  if(by > 380){
+    bx = 215; by = 300; vy = -3; go = false;
+  }
+
+  // bricks - only flips vy, multiple bricks can vanish per hit
+  for(var k=0;k<bricks.length;k++){
+    var b = bricks[k];
+    if(b.on && bx > b.x && bx < b.x + 50 && by > b.y && by < b.y + 18){
+      b.on = false;
+      vy = -vy;
+    }
+  }
+
+  x.clearRect(0,0,440,380);
+
+  for(var k=0;k<bricks.length;k++){
+    var b = bricks[k];
+    if(b.on){
+      x.fillStyle = "#FF4D4D";
+      x.fillRect(b.x, b.y, 50, 18);
+    }
+  }
+
+  x.fillStyle = "white";
+  x.fillRect(px, 360, pw, 10);
+
+  x.fillStyle = "#FFC700";
+  x.fillRect(bx, by, 8, 8);
+
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

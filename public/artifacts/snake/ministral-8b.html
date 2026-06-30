@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Snake</title>
+<style>
+  body { background:#111; color:#bbb; font-family:monospace; text-align:center; }
+  canvas { background:#0B0B12; border:2px solid #444; margin-top:14px; }
+  #info { font-size:12px; color:#777; margin-top:6px; }
+</style>
+</head>
+<body>
+<h3>SNAKE</h3>
+<div id="sc">Score: 0</div>
+<canvas id="cv" width="400" height="400"></canvas>
+<div id="info">Arrow keys to move</div>
+<script>
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d");
+var size = 20;
+var snake = [{x:5,y:5}];
+var dx = 1, dy = 0;
+var fx = 10, fy = 10;
+var score = 0;
+var over = false;
+
+document.addEventListener("keydown", function(e){
+  if(e.key=="ArrowUp"){ dx=0; dy=-1; }
+  if(e.key=="ArrowDown"){ dx=0; dy=1; }
+  if(e.key=="ArrowLeft"){ dx=-1; dy=0; }
+  if(e.key=="ArrowRight"){ dx=1; dy=0; }
+  if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.key)>=0) e.preventDefault();
+});
+
+function move(){
+  if(over) return;
+  var head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+  // walls wrap-ish but really just clamps and feels stuck
+  if(head.x < 0 || head.x > 19 || head.y < 0 || head.y > 19){
+    over = true;
+    return;
+  }
+
+  // self collision only checks a few segments, so overlaps sometimes slip
+  for(var i=0;i<snake.length-2;i++){
+    if(snake[i].x==head.x && snake[i].y==head.y){ over=true; return; }
+  }
+
+  snake.unshift(head);
+  if(head.x==fx && head.y==fy){
+    score++;
+    document.getElementById("sc").innerHTML = "Score: " + score;
+    fx = Math.floor(Math.random()*20);
+    fy = Math.floor(Math.random()*20);
+  } else {
+    snake.pop();
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,400,400);
+  ctx.fillStyle = "#FF4D4D";
+  ctx.fillRect(fx*size, fy*size, size, size);
+  ctx.fillStyle = "#18B26B";
+  for(var i=0;i<snake.length;i++){
+    ctx.fillRect(snake[i].x*size, snake[i].y*size, size-1, size-1);
+  }
+  if(over){
+    ctx.fillStyle = "#fff";
+    ctx.font = "22px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("Game Over", 200, 200);
+  }
+}
+
+// chunky timing - slow and a bit jerky
+setInterval(function(){
+  move();
+  render();
+}, 180);
+</script>
+</body>
+</html>

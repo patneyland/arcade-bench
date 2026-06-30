@@ -1,0 +1,112 @@
+// arcade-bench data model.
+//
+// Dev/local uses SQLite for zero-credential, fully-testable runs.
+// Production target is Postgres (Supabase) — switch `provider` to "postgresql"
+// and point DATABASE_URL at Supabase. The schema is written to port cleanly.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A contestant: a small / cost-efficient AI model.
+model Model {
+  id              String       @id @default(cuid())
+  slug            String       @unique
+  name            String
+  vendor          String // Google, OpenAI, DeepSeek, Alibaba, Mistral, Meta, ...
+  paramSize       String? // e.g. "4B"; null for closed-weight models
+  openrouterId    String? // e.g. "google/gemini-2.5-flash-lite"
+  costPerGen      Float        @default(0) // measured $ per generation
+  costPer1MInput  Float? // OpenRouter list price, $ / 1M input tokens
+  costPer1MOutput Float? // OpenRouter list price, $ / 1M output tokens
+  tier            String? // featherweight | midweight | heavyweight
+  active          Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  generations     Generation[]
+  ratings         Rating[]
+}
+
+/// A classic game the models are asked to recreate. Ordered chronologically.
+model Game {
+  id                String       @id @default(cuid())
+  slug              String       @unique
+  title             String
+  year              Int
+  creator           String
+  prompt            String // the locked prompt sent to every model
+  specMarkdown      String? // optional richer brief shown to voters
+  referenceMediaUrl String? // image/clip of the original
+  roundOrder        Int          @unique
+  status            String       @default("upcoming") // live | now | upcoming
+  generations       Generation[]
+  ratings           Rating[]
+}
+
+/// One artifact produced by one model for one game (one sample).
+model Generation {
+  id           String     @id @default(cuid())
+  modelId      String
+  gameId       String
+  sampleIndex  Int        @default(0)
+  artifactPath String // public URL/path to the self-contained HTML file
+  cost         Float      @default(0)
+  tokensIn     Int        @default(0)
+  tokensOut    Int        @default(0)
+  status       String     @default("ok") // ok | no-html-found | broken
+  published    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  model        Model      @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  game         Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  votesAsA     Vote[]     @relation("genA")
+  votesAsB     Vote[]     @relation("genB")
+
+  @@index([gameId, published])
+  @@index([modelId])
+}
+
+/// A grader. Keyed by the auth provider's stable id (Clerk/OAuth, or a dev id).
+model User {
+  id        String   @id @default(cuid())
+  authId    String   @unique
+  provider  String? // github | google | dev
+  handle    String?
+  createdAt DateTime @default(now())
+  votes     Vote[]
+}
+
+/// One pairwise vote. Unique per (user, pairing) to enforce one-vote-per-pairing.
+model Vote {
+  id        String     @id @default(cuid())
+  userId    String
+  gameId    String
+  genAId    String
+  genBId    String
+  winner    String // "a" | "b" | "tie" | "both_bad"
+  createdAt DateTime   @default(now())
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  genA      Generation @relation("genA", fields: [genAId], references: [id], onDelete: Cascade)
+  genB      Generation @relation("genB", fields: [genBId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, genAId, genBId])
+  @@index([gameId])
+}
+
+/// A computed rating for a model, overall (gameId null) or per game.
+model Rating {
+  id        String   @id @default(cuid())
+  modelId   String
+  gameId    String? // null = overall rating across all games
+  rating    Float    @default(1000)
+  interval  Float    @default(0) // +/- confidence half-width
+  nVotes    Int      @default(0)
+  updatedAt DateTime @default(now())
+  model     Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  game      Game?    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, gameId])
+}

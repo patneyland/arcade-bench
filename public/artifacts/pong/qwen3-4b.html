@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pong Game</title>
+<style>
+  body { background: #111; color: #ccc; font-family: monospace; text-align: center; }
+  canvas { background: #0B0B12; border: 2px solid #444; margin-top: 20px; }
+  #score { margin-top: 8px; font-size: 18px; }
+  #help { font-size: 12px; color: #888; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <h3>PONG</h3>
+  <canvas id="cv" width="500" height="350"></canvas>
+  <div id="score">0 : 0</div>
+  <div id="help">W/S or Up/Down arrows to move</div>
+<script>
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d");
+var W = 500, H = 350;
+
+var playerY = 140;
+var aiY = 140;
+var paddleH = 60, paddleW = 8;
+var bx = 250, by = 175;
+var bvx = 3, bvy = 3;
+var pScore = 0, aScore = 0;
+
+var keys = {};
+document.onkeydown = function(e){
+  keys[e.key] = true;
+  if(e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
+};
+document.onkeyup = function(e){ keys[e.key] = false; };
+
+function tick(){
+  // player movement
+  if(keys["w"] || keys["W"] || keys["ArrowUp"]) playerY -= 5;
+  if(keys["s"] || keys["S"] || keys["ArrowDown"]) playerY += 5;
+  if(playerY < 0) playerY = 0;
+  if(playerY > H - paddleH) playerY = H - paddleH;
+
+  // AI movement - erratic, only moves sometimes
+  if(Math.random() > 0.35){
+    if(aiY + paddleH/2 < by) aiY += 3;
+    else aiY -= 3;
+  }
+  if(aiY < 0) aiY = 0;
+  if(aiY > H - paddleH) aiY = H - paddleH;
+
+  bx += bvx;
+  by += bvy;
+
+  if(by < 0 || by > H) bvy = -bvy;
+
+  // player paddle (left)
+  if(bx < 20 && by > playerY && by < playerY + paddleH){
+    bvx = Math.abs(bvx);
+  }
+  // ai paddle (right)
+  if(bx > W - 20 && by > aiY && by < aiY + paddleH){
+    bvx = -Math.abs(bvx);
+  }
+
+  if(bx < 0){ aScore++; reset(); }
+  if(bx > W){ pScore++; reset(); }
+
+  document.getElementById("score").innerHTML = pScore + " : " + aScore;
+
+  render();
+  requestAnimationFrame(tick);
+}
+
+function reset(){
+  bx = 250; by = 175;
+  bvx = (Math.random() > 0.5 ? 3 : -3);
+  bvy = 3;
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = "#2D6CFF";
+  ctx.fillRect(12, playerY, paddleW, paddleH);
+  ctx.fillStyle = "#FF4D4D";
+  ctx.fillRect(W - 20, aiY, paddleW, paddleH);
+  ctx.fillStyle = "#FFC700";
+  ctx.fillRect(bx - 4, by - 4, 8, 8);
+}
+
+tick();
+</script>
+</body>
+</html>

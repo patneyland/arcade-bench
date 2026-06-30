@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong</title>
+<style>
+  body{margin:0;background:#0a0a12;color:#ddd;font-family:Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding-top:30px;}
+  canvas{background:#0B0B12;border:2px solid #1B1A22;display:block;}
+  .info{margin-top:10px;font-size:13px;color:#999;}
+  h2{font-family:monospace;letter-spacing:.2em;color:#FFC700;margin:0 0 14px;}
+</style>
+</head>
+<body>
+  <h2>PONG</h2>
+  <canvas id="game" width="600" height="400"></canvas>
+  <div class="info">W/S or &uarr;/&darr; to move &middot; first to 11 wins</div>
+<script>
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var W = 600, H = 400;
+var pw = 10, ph = 70;
+
+var p1 = { y: H/2 - ph/2, score: 0 };
+var p2 = { y: H/2 - ph/2, score: 0 };
+var ball = { x: W/2, y: H/2, vx: 4, vy: 3, size: 8 };
+var WINSCORE = 11;
+var gameOver = false;
+
+var keys = {};
+document.addEventListener('keydown', function(e){
+  keys[e.key] = true;
+  if((e.key==='ArrowUp'||e.key==='ArrowDown')) e.preventDefault();
+  if(e.key===' ' && gameOver){ resetGame(); }
+});
+document.addEventListener('keyup', function(e){ keys[e.key] = false; });
+
+function resetGame(){
+  p1.score = 0; p2.score = 0; gameOver = false;
+  resetBall(1);
+}
+function resetBall(dir){
+  ball.x = W/2; ball.y = H/2;
+  ball.vx = 4 * dir;
+  ball.vy = (Math.random() > 0.5 ? 1 : -1) * 3;
+}
+
+function update(){
+  if(gameOver) return;
+  // player 1
+  if(keys['w']||keys['W']||keys['ArrowUp']) p1.y -= 5;
+  if(keys['s']||keys['S']||keys['ArrowDown']) p1.y += 5;
+  if(p1.y < 0) p1.y = 0;
+  if(p1.y > H - ph) p1.y = H - ph;
+
+  // simple AI: move toward ball
+  var center = p2.y + ph/2;
+  if(center < ball.y - 8) p2.y += 4;
+  else if(center > ball.y + 8) p2.y -= 4;
+  if(p2.y < 0) p2.y = 0;
+  if(p2.y > H - ph) p2.y = H - ph;
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  if(ball.y < 0){ ball.y = 0; ball.vy = -ball.vy; }
+  if(ball.y > H - ball.size){ ball.y = H - ball.size; ball.vy = -ball.vy; }
+
+  // left paddle
+  if(ball.x < pw + 14 && ball.x > 0 && ball.y + ball.size > p1.y && ball.y < p1.y + ph){
+    ball.vx = Math.abs(ball.vx);
+    var d1 = (ball.y - (p1.y + ph/2)) / (ph/2);
+    ball.vy = d1 * 4;
+  }
+  // right paddle
+  if(ball.x > W - pw - 14 - ball.size && ball.x < W && ball.y + ball.size > p2.y && ball.y < p2.y + ph){
+    ball.vx = -Math.abs(ball.vx);
+    var d2 = (ball.y - (p2.y + ph/2)) / (ph/2);
+    ball.vy = d2 * 4;
+  }
+
+  if(ball.x < 0){ p2.score++; checkWin(); resetBall(1); }
+  if(ball.x > W){ p1.score++; checkWin(); resetBall(-1); }
+}
+
+function checkWin(){
+  if(p1.score >= WINSCORE || p2.score >= WINSCORE) gameOver = true;
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = '#2a2a3a';
+  ctx.setLineDash([8,8]);
+  ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '30px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(p1.score, W/2 - 50, 40);
+  ctx.fillText(p2.score, W/2 + 50, 40);
+
+  ctx.fillStyle = '#2D6CFF';
+  ctx.fillRect(14, p1.y, pw, ph);
+  ctx.fillStyle = '#FF4D4D';
+  ctx.fillRect(W - pw - 14, p2.y, pw, ph);
+
+  ctx.fillStyle = '#FFC700';
+  ctx.fillRect(ball.x, ball.y, ball.size, ball.size);
+
+  if(gameOver){
+    ctx.fillStyle = '#fff';
+    ctx.font = '26px Arial';
+    var msg = p1.score >= WINSCORE ? 'You Win!' : 'CPU Wins!';
+    ctx.fillText(msg, W/2, H/2 - 10);
+    ctx.font = '14px Arial';
+    ctx.fillText('Press Space to restart', W/2, H/2 + 20);
+  }
+}
+
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

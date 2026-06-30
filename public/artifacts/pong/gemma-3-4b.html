@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>pong</title>
+<style>
+  body { background:black; color:white; font-family:sans-serif; text-align:center; }
+  canvas { background:#0B0B12; border:1px solid grey; }
+  p { font-size:12px; color:#777; }
+</style>
+</head>
+<body>
+<h4>PONG</h4>
+<canvas id="canvas" width="480" height="320"></canvas>
+<p>W/S or Up/Down to move</p>
+<div id="s">Score: 0 - 0</div>
+<script>
+var c = document.getElementById("canvas");
+var x = c.getContext("2d");
+
+var p1y = 130;
+var p2y = 130;
+var ballX = 240;
+var ballY = 160;
+var dx = 5;
+var dy = 5;
+var s1 = 0;
+var s2 = 0;
+
+var up=false, down=false;
+
+document.addEventListener("keydown", function(e){
+  if(e.key=="w"||e.key=="W"||e.key=="ArrowUp") up=true;
+  if(e.key=="s"||e.key=="S"||e.key=="ArrowDown") down=true;
+});
+document.addEventListener("keyup", function(e){
+  if(e.key=="w"||e.key=="W"||e.key=="ArrowUp") up=false;
+  if(e.key=="s"||e.key=="S"||e.key=="ArrowDown") down=false;
+});
+
+function game(){
+  if(up) p1y = p1y - 6;
+  if(down) p1y = p1y + 6;
+
+  // ai chases ball directly (too perfect, then jitters)
+  p2y = ballY - 30 + (Math.random()*20 - 10);
+
+  ballX += dx;
+  ballY += dy;
+
+  // walls - sometimes ball slips past top because check is loose
+  if(ballY < 0) dy = 5;
+  if(ballY > 320) dy = -5;
+
+  // paddle collision - no x nudge, ball can clip into paddle and stutter
+  if(ballX < 20){
+    if(ballY > p1y && ballY < p1y + 60){
+      dx = 5;
+    } else {
+      s2++;
+      ballX = 240; ballY = 160;
+    }
+  }
+  if(ballX > 460){
+    if(ballY > p2y && ballY < p2y + 60){
+      dx = -5;
+    } else {
+      s1++;
+      ballX = 240; ballY = 160;
+    }
+  }
+
+  // draw
+  x.clearRect(0,0,480,320);
+  x.fillStyle = "#2D6CFF";
+  x.fillRect(8, p1y, 8, 60);
+  x.fillStyle = "#FF4D4D";
+  x.fillRect(464, p2y, 8, 60);
+  x.fillStyle = "white";
+  x.fillRect(ballX, ballY, 8, 8);
+
+  document.getElementById("s").innerHTML = "Score: " + s1 + " - " + s2;
+
+  requestAnimationFrame(game);
+}
+game();
+</script>
+</body>
+</html>

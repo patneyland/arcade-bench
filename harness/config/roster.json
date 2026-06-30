@@ -1,0 +1,38 @@
+[
+  {
+    "slug": "gemini-flash-lite",
+    "name": "Gemini 2.5 Flash-Lite",
+    "vendor": "Google",
+    "openrouterId": "google/gemini-2.5-flash-lite"
+  },
+  {
+    "slug": "gpt-4-1-nano",
+    "name": "GPT-4.1 nano",
+    "vendor": "OpenAI",
+    "openrouterId": "openai/gpt-4.1-nano"
+  },
+  {
+    "slug": "deepseek-v3",
+    "name": "DeepSeek V3",
+    "vendor": "DeepSeek",
+    "openrouterId": "deepseek/deepseek-chat"
+  },
+  {
+    "slug": "qwen3-4b",
+    "name": "Qwen3 4B",
+    "vendor": "Alibaba",
+    "openrouterId": "qwen/qwen3-4b"
+  },
+  {
+    "slug": "gemma-3-4b",
+    "name": "Gemma 3 4B",
+    "vendor": "Google",
+    "openrouterId": "google/gemma-3-4b-it"
+  },
+  {
+    "slug": "ministral-8b",
+    "name": "Ministral 8B",
+    "vendor": "Mistral",
+    "openrouterId": "mistralai/ministral-8b"
+  }
+]

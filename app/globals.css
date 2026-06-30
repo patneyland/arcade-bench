@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+@layer base {
+  body {
+    background-color: theme("colors.cream");
+    color: theme("colors.ink");
+    /* Barely-there 32px pixel grid on the canvas (design.md §4).
+       Faint linear-gradient hairlines at ~2.5% ink opacity — graph paper, not a focal point. */
+    background-image:
+      linear-gradient(to right, rgba(27, 26, 34, 0.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(27, 26, 34, 0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  /* Chunky-language focus ring (design.md §10): visible 2px offset outline. */
+  :focus-visible {
+    outline: 2px solid theme("colors.blue");
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* The signature press control: 2px ink border, 12px radius, hard offset shadow,
+     and the press interaction that slides the element into its shadow (design.md §5). */
+  .btn {
+    @apply inline-flex items-center justify-center gap-[9px] rounded-btn border-2 border-ink font-grotesk font-semibold leading-none transition-[transform,box-shadow] duration-75;
+    @apply active:translate-x-[3px] active:translate-y-[3px] active:shadow-none;
+  }
+
+  /* The dark game canvas frame (design.md §8): 4:3, dark, 2px ink border, pixelated. */
+  .game-canvas {
+    @apply relative w-full overflow-hidden rounded-chip border-2 border-ink bg-[#0B0B12];
+    aspect-ratio: 4 / 3;
+    image-rendering: pixelated;
+  }
+
+  /* Eyebrow / section label (design.md §3): mono 11px uppercase on cream-2. */
+  .eyebrow {
+    @apply inline-flex items-center rounded-full border-2 border-ink bg-cream-2 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.16em];
+  }
+
+  /* Dashed section divider (design.md §4). */
+  .section-divider {
+    @apply border-0 border-t-2 border-dashed border-line;
+  }
+}
+
+@layer utilities {
+  /* Pixel icons render crisp, not smoothed. */
+  .pixelated {
+    image-rendering: pixelated;
+  }
+}

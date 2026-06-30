@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong</title>
+<style>
+  html,body{margin:0;height:100%;background:#07070d;color:#e8e8f0;
+    font-family:system-ui,-apple-system,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+  #wrap{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  canvas{background:#0B0B12;border:2px solid #1B1A22;border-radius:6px;
+    image-rendering:pixelated;box-shadow:4px 4px 0 #000;}
+  #controls{font-size:13px;color:#9a98ab;letter-spacing:.02em;}
+  h1{font-size:14px;letter-spacing:.3em;margin:0;color:#FFC700;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>PONG</h1>
+  <canvas id="c" width="640" height="480"></canvas>
+  <div id="controls">W/S or &uarr;/&darr; to move &middot; first to 11 wins &middot; Space to serve / restart</div>
+</div>
+<script>
+(function(){
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const PADDLE_W = 12, PADDLE_H = 78;
+  const WIN = 11;
+
+  const player = { x: 24, y: H/2 - PADDLE_H/2, vy: 0, score: 0 };
+  const ai     = { x: W - 24 - PADDLE_W, y: H/2 - PADDLE_H/2, vy: 0, score: 0 };
+  const ball   = { x: W/2, y: H/2, vx: 0, vy: 0, r: 7, speed: 6 };
+
+  let state = 'serve';   // serve | play | over
+  let serveDir = 1;
+  let winner = '';
+  const keys = {};
+
+  function resetBall(dir){
+    ball.x = W/2; ball.y = H/2;
+    ball.speed = 6;
+    const angle = (Math.random()*0.6 - 0.3); // shallow start
+    ball.vx = dir * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+  }
+
+  function serve(){
+    if(state === 'over'){
+      player.score = 0; ai.score = 0; winner = '';
+    }
+    state = 'serve';
+    resetBall(serveDir);
+  }
+  resetBall(serveDir);
+
+  window.addEventListener('keydown', e=>{
+    if(['ArrowUp','ArrowDown',' ','w','s','W','S'].includes(e.key)) e.preventDefault();
+    keys[e.key] = true;
+    if(e.key === ' '){
+      if(state === 'serve') state = 'play';
+      else if(state === 'over') serve();
+    }
+  });
+  window.addEventListener('keyup', e=>{ keys[e.key] = false; });
+
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+
+  function update(){
+    // player input
+    const up   = keys['ArrowUp']   || keys['w'] || keys['W'];
+    const down = keys['ArrowDown'] || keys['s'] || keys['S'];
+    const sp = 7;
+    player.vy = (down?sp:0) - (up?sp:0);
+    player.y = clamp(player.y + player.vy, 0, H - PADDLE_H);
+
+    // AI: tracks ball with capped speed + small deadzone so it feels human-ish
+    const target = ball.y - PADDLE_H/2;
+    const diff = target - ai.y;
+    const aiSp = 5.4;
+    if(Math.abs(diff) > 6) ai.y += clamp(diff, -aiSp, aiSp);
+    ai.y = clamp(ai.y, 0, H - PADDLE_H);
+
+    if(state !== 'play') return;
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // top/bottom walls
+    if(ball.y - ball.r < 0){ ball.y = ball.r; ball.vy = Math.abs(ball.vy); }
+    if(ball.y + ball.r > H){ ball.y = H - ball.r; ball.vy = -Math.abs(ball.vy); }
+
+    // paddle collisions with angle reflection based on hit position
+    function bounce(p, dir){
+      if(ball.x - ball.r < p.x + PADDLE_W && ball.x + ball.r > p.x &&
+         ball.y + ball.r > p.y && ball.y - ball.r < p.y + PADDLE_H){
+        const rel = (ball.y - (p.y + PADDLE_H/2)) / (PADDLE_H/2); // -1..1
+        const maxAngle = Math.PI * 0.38;
+        const angle = rel * maxAngle;
+        ball.speed = Math.min(ball.speed + 0.35, 13);
+        ball.vx = dir * ball.speed * Math.cos(angle);
+        ball.vy = ball.speed * Math.sin(angle);
+        // nudge out of paddle so it can't get stuck
+        ball.x = dir > 0 ? p.x + PADDLE_W + ball.r : p.x - ball.r;
+        return true;
+      }
+      return false;
+    }
+    bounce(player, 1);
+    bounce(ai, -1);
+
+    // scoring
+    if(ball.x + ball.r < 0){ ai.score++; serveDir = 1; afterPoint(); }
+    else if(ball.x - ball.r > W){ player.score++; serveDir = -1; afterPoint(); }
+  }
+
+  function afterPoint(){
+    if(player.score >= WIN){ winner = 'YOU WIN'; state = 'over'; }
+    else if(ai.score >= WIN){ winner = 'CPU WINS'; state = 'over'; }
+    else { state = 'serve'; resetBall(serveDir); }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // net
+    ctx.fillStyle = '#262538';
+    for(let y=8; y<H; y+=26) ctx.fillRect(W/2-2, y, 4, 14);
+
+    // scores
+    ctx.fillStyle = '#e8e8f0';
+    ctx.font = '46px "Courier New",monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(player.score, W*0.30, 60);
+    ctx.fillText(ai.score, W*0.70, 60);
+
+    // paddles
+    ctx.fillStyle = '#2D6CFF';
+    ctx.fillRect(player.x, player.y, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#FF4D4D';
+    ctx.fillRect(ai.x, ai.y, PADDLE_W, PADDLE_H);
+
+    // ball
+    ctx.fillStyle = '#FFC700';
+    ctx.fillRect(ball.x-ball.r, ball.y-ball.r, ball.r*2, ball.r*2);
+
+    // overlays
+    ctx.fillStyle = '#cfcde0';
+    ctx.font = '16px system-ui,sans-serif';
+    if(state === 'serve'){
+      ctx.fillText('Press Space to serve', W/2, H/2 + 70);
+    } else if(state === 'over'){
+      ctx.fillStyle = winner==='YOU WIN' ? '#18B26B' : '#FF4D4D';
+      ctx.font = '32px system-ui,sans-serif';
+      ctx.fillText(winner, W/2, H/2 - 10);
+      ctx.fillStyle = '#cfcde0';
+      ctx.font = '16px system-ui,sans-serif';
+      ctx.fillText('Press Space to play again', W/2, H/2 + 30);
+    }
+  }
+
+  function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+</body>
+</html>
