@@ -9,6 +9,9 @@ export const metadata = {
   description: "The game roster walks forward through video game history, 1952 to present.",
 };
 
+// Game statuses (live / now / upcoming) come from the DB and change between deploys.
+export const dynamic = "force-dynamic";
+
 export default async function HistoryPage() {
   const entries = await getHistoryTimeline();
 

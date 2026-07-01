@@ -8,6 +8,11 @@ import { ButtonLink } from "@/components/Button";
 import { Container, SectionDivider, SectionHead } from "@/components/Layout";
 import { PlayIcon, TrophyIcon, InfoIcon } from "@/components/icons";
 
+// Live data on every request: a fresh arena pairing and the current leaderboard.
+// Without this, Next prerenders the page at build time and every visitor sees the
+// same frozen matchup and stale ratings until the next deploy.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [pairing, leaderboard, timeline] = await Promise.all([
     getArenaPairing(),

@@ -16,6 +16,9 @@ const BASE_URL =
   "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 const TEST_URL = `${BASE_URL.split("?")[0]}?schema=${TEST_SCHEMA}`;
 process.env.DATABASE_URL = TEST_URL;
+// `prisma db push` connects via directUrl when the datasource declares one, so it must
+// point at the same isolated schema or the tables land in the wrong place.
+process.env.DIRECT_URL = TEST_URL;
 
 // Create the schema by pushing the Prisma schema into it. Probe reachability synchronously
 // so we can decide whether to run or skip the suite at collection time.
@@ -23,7 +26,7 @@ let dbReady = false;
 try {
   execSync("npx prisma db push --skip-generate --accept-data-loss", {
     cwd: process.cwd(),
-    env: { ...process.env, DATABASE_URL: TEST_URL },
+    env: { ...process.env, DATABASE_URL: TEST_URL, DIRECT_URL: TEST_URL },
     stdio: "ignore",
     timeout: 90_000,
   });

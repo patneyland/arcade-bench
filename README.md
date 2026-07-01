@@ -2,10 +2,10 @@
 
 **A community-voted arena that measures how well small, cost-efficient AI models can recreate classic arcade games.** Players vote, the leaderboard ranks the models, and the game list walks forward through video game history.
 
-![Status](https://img.shields.io/badge/status-planning-orange)
+![Status](https://img.shields.io/badge/status-v0-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> Status: design stage. This repo holds the product thinking ([PRD.md](PRD.md)). No application code yet.
+> Status: v0 built. A working play-and-vote arena — Next.js app, Clerk auth, Supabase Postgres, Bradley-Terry ratings, and real model generations for Pong, Snake, and Breakout. See [PRD.md](PRD.md) for the product thinking.
 
 ---
 
@@ -55,6 +55,33 @@ The chronology keeps the "walking through history" narrative, and the rising dif
 ## Voting and accounts
 
 Anyone can play, no account needed. Casting a vote requires a quick sign-in (GitHub or Google), only so the human grading can be tracked and trusted. It stays free. The login exists to keep the votes honest, nothing more.
+
+## Running locally
+
+```bash
+npm install
+npx supabase start   # local Supabase Postgres (Docker); prints the DB URL
+cp .env.example .env # then add Clerk dev keys (pk_test_/sk_test_)
+npm run setup        # prisma generate + db push + seed (with demo votes)
+npm run dev          # http://localhost:3000
+npm test             # web app tests; `npm test --prefix harness` for the harness
+```
+
+## Deploying (Vercel + Supabase + Clerk)
+
+1. **Supabase**: create a hosted project. Grab both connection strings from
+   Connect → ORMs (Prisma): the transaction-pooler URL (port 6543, add
+   `?pgbouncer=true&connection_limit=1`) and the direct URL (port 5432).
+2. **Clerk**: create a **production instance** for the deployed domain and enable
+   GitHub (and Google) sign-in. Grab the `pk_live_` / `sk_live_` keys.
+3. **Vercel**: import the repo, then set env vars: `DATABASE_URL` (pooler),
+   `DIRECT_URL` (direct), `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`,
+   plus the four `NEXT_PUBLIC_CLERK_*_URL` vars from `.env.example`.
+4. **Schema + data**: from your machine, point `.env` at production and run
+   `npx prisma db push`, then seed without demo votes:
+   `SEED_SYNTHETIC_VOTES=false npx tsx prisma/seed.ts`.
+5. Deploy. The build runs `prisma generate && next build`; all data pages render
+   dynamically, so no DB access happens at build time.
 
 ## More detail
 

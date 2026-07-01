@@ -9,7 +9,8 @@ classic games. See `PLAN.md`, `PRD.md`, `design.md` for product + visual spec.
   (`npx supabase start`); production points `DATABASE_URL` at a hosted Supabase project.
   Same schema either way. Supabase Studio (local): http://127.0.0.1:54323.
 - **Vitest** (+ jsdom, Testing Library) for the web app; the harness owns its own test run.
-- **Auth**: dev cookie-mock now; Clerk in production (per PLAN.md). Abstracted in `lib/auth.ts`.
+- **Auth**: Clerk everywhere (dev instance with pk_test keys locally, production instance
+  in prod). Abstracted in `lib/auth.ts`; votes are gated server-side in the vote API.
 
 ## Shared contracts (do not break)
 - `lib/types.ts` — view-model types, the backend↔frontend boundary.

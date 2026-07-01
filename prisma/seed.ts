@@ -190,8 +190,26 @@ async function loadGenSpecs(): Promise<{ specs: GenSpec[]; source: "manifest" | 
   return { specs, source: "fallback" };
 }
 
+// Synthetic votes/dev users are for dev + demo data only. Set SEED_SYNTHETIC_VOTES=false
+// when seeding production so the leaderboard starts empty and fills with real votes.
+const SYNTHESIZE_VOTES =
+  process.env.SEED_SYNTHETIC_VOTES !== "false" && process.env.SEED_SYNTHETIC_VOTES !== "0";
+
 async function main() {
   console.log("Seeding arcade-bench…");
+
+  // Safety: re-seeding wipes ALL votes. If real (non-dev) graders have voted, this is
+  // production data loss — refuse unless explicitly forced.
+  const realVotes = await prisma.vote.count({
+    where: { user: { NOT: { provider: "dev" } } },
+  });
+  if (realVotes > 0 && process.env.FORCE_RESEED !== "1") {
+    console.error(
+      `Refusing to seed: ${realVotes} real vote(s) exist and re-seeding deletes them all.\n` +
+        `Set FORCE_RESEED=1 to override.`,
+    );
+    process.exit(1);
+  }
 
   // 1) Clear vote-derived + generation data (idempotent re-seed). Order respects FKs.
   await prisma.vote.deleteMany({});
@@ -276,15 +294,23 @@ async function main() {
     if (total > 0) console.log(`  ${g.slug}: ${pub}/${total} published (playable) builds`);
   }
 
-  // 5) Create dev users.
+  // 5) Create dev users (only when synthesizing votes).
   const users = [];
-  for (const handle of DEV_USERS) {
-    const user = await prisma.user.upsert({
-      where: { authId: `dev_seed_${handle}` },
-      update: { handle, provider: "dev" },
-      create: { authId: `dev_seed_${handle}`, provider: "dev", handle },
-    });
-    users.push(user);
+  if (SYNTHESIZE_VOTES) {
+    for (const handle of DEV_USERS) {
+      const user = await prisma.user.upsert({
+        where: { authId: `dev_seed_${handle}` },
+        update: { handle, provider: "dev" },
+        create: { authId: `dev_seed_${handle}`, provider: "dev", handle },
+      });
+      users.push(user);
+    }
+  } else {
+    // Production seed: remove any dev users (and their votes, via cascade) so the
+    // arena launches clean with only real graders.
+    const removed = await prisma.user.deleteMany({ where: { provider: "dev" } });
+    if (removed.count > 0) console.log(`Removed ${removed.count} dev user(s).`);
+    console.log("SEED_SYNTHETIC_VOTES=false — skipping synthesized votes.");
   }
 
   // 6) Synthesize pairwise votes over the PUBLISHED builds of each game.
@@ -292,7 +318,7 @@ async function main() {
   let voteCount = 0;
   const VOTES_PER_GAME = 50;
 
-  for (const [gameSlug, modelSlugs] of Object.entries(publishedByGame)) {
+  for (const [gameSlug, modelSlugs] of SYNTHESIZE_VOTES ? Object.entries(publishedByGame) : []) {
     if (modelSlugs.length < 2) continue;
     const game = gameBySlug.get(gameSlug)!;
     let made = 0;

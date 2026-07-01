@@ -10,6 +10,9 @@ export const metadata = {
   description: "Play two AI recreations of the same classic game and vote the better one.",
 };
 
+// Each request must draw a fresh random pairing — never prerender this at build time.
+export const dynamic = "force-dynamic";
+
 export default async function ArenaPage() {
   const pairing = await getArenaPairing();
 
