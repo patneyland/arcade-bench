@@ -33,10 +33,12 @@
     @apply active:translate-x-[3px] active:translate-y-[3px] active:shadow-none;
   }
 
-  /* The dark game canvas frame (design.md §8): 4:3, dark, 2px ink border, pixelated. */
+  /* The dark game canvas frame (design.md §8): dark, 2px ink border, pixelated.
+     7:6 matches the 820×700 virtual viewport the SandboxedPlayer scales into
+     (docs/ux-overhaul.md §1 — the rating-integrity fix). */
   .game-canvas {
     @apply relative w-full overflow-hidden rounded-chip border-2 border-ink bg-[#0B0B12];
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 7 / 6;
     image-rendering: pixelated;
   }
 

@@ -1,4 +1,6 @@
-// Arena — the full voting experience: the ArenaCard + VoteBar front and center.
+// Arena — the "one cabinet" session flow. The ArenaCard runs the whole
+// coin → play A → play B → verdict → reveal round loop (docs/ux-overhaul.md §1).
+// No intro block: the cabinet is the page.
 
 import { getArenaPairing } from "@/lib/data";
 import { ArenaCard } from "@/components/ArenaCard";
@@ -18,22 +20,13 @@ export default async function ArenaPage() {
 
   return (
     <main>
-      <Container className="py-[54px]">
-        <div className="mb-7 max-w-[60ch]">
-          <span className="eyebrow mb-4 inline-flex">The Arena</span>
-          <h1 className="font-grotesk text-[30px] font-bold tracking-[-0.01em]">
-            Play both. Vote the better recreation.
-          </h1>
-          <p className="mt-3 font-sans text-[17px] leading-relaxed text-ink-soft">
-            Both builds answer the same locked prompt for the same game. Model identities
-            stay hidden until you vote. Judge faithfulness to the original and how fun it is
-            to play.
-          </p>
-        </div>
-
-        {pairing ? (
+      {pairing ? (
+        // Wider than the 1120px text container so the stage can grow on big screens.
+        <div className="mx-auto w-full max-w-[1400px] px-6 py-8 sm:py-10">
           <ArenaCard pairing={pairing} />
-        ) : (
+        </div>
+      ) : (
+        <Container className="py-[54px]">
           <div className="rounded-[14px] border-2 border-dashed border-line bg-surface p-12 text-center shadow-hard">
             <p className="font-grotesk text-xl font-bold">No match is ready right now</p>
             <p className="mx-auto mt-2 max-w-[48ch] font-sans text-ink-soft">
@@ -49,8 +42,8 @@ export default async function ArenaPage() {
               </ButtonLink>
             </div>
           </div>
-        )}
-      </Container>
+        </Container>
+      )}
     </main>
   );
 }

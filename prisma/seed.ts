@@ -19,7 +19,7 @@ import { PrismaClient } from "@prisma/client";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { LOCKED_PROMPT } from "../lib/constants";
+import { CERTIFIED_PLAYABLE_PCT, LOCKED_PROMPT } from "../lib/constants";
 import { recomputeAndStore } from "../lib/rating/recompute";
 
 const prisma = new PrismaClient();
@@ -102,6 +102,32 @@ const QUALITY: Record<string, number> = {
 };
 
 const DEV_USERS = ["patrick", "ada", "grace", "linus", "margaret", "dennis", "alan", "katherine", "tim", "radia"];
+
+// --- playability screening seed (docs/ux-overhaul.md §7) ---------------------
+// SYNTHESIZED tester verdicts so the dev Arcade isn't empty and the Test Lab
+// queue has a realistic mix: certified builds, reported-unplayable builds
+// (including the two KNOWN-BROKEN artifacts: breakout/gemma-3-4b renders a
+// blank page, snake/qwen3-8b draws black-on-black), and unscreened builds
+// (zero votes) left for testers. Keyed "gameSlug/modelSlug"; votes are cast by
+// distinct dev users (unique (userId, generationId)).
+const PLAYABILITY_SEED: Record<string, { playable: number; unplayable: number }> = {
+  // Certified (playable% ≥ 85):
+  "pong/gemini-flash-lite": { playable: 5, unplayable: 0 }, // 100%
+  "pong/gpt-4-1-nano": { playable: 4, unplayable: 0 }, // 100%
+  "pong/deepseek-v3": { playable: 6, unplayable: 1 }, // 85.7% — just clears the bar
+  "snake/gemini-flash-lite": { playable: 4, unplayable: 0 }, // 100%
+  "snake/gpt-4-1-nano": { playable: 3, unplayable: 0 }, // 100%
+  "breakout/gpt-4-1-nano": { playable: 4, unplayable: 0 }, // 100%
+  "breakout/qwen3-8b": { playable: 3, unplayable: 0 }, // 100%
+  // Reported unplayable (below the bar — visible on the leaderboard, not in the Arcade):
+  "breakout/gemma-3-4b": { playable: 0, unplayable: 3 }, // KNOWN-BROKEN: blank page
+  "snake/qwen3-8b": { playable: 0, unplayable: 4 }, // KNOWN-BROKEN: black-on-black
+  "pong/gemma-3-4b": { playable: 0, unplayable: 2 }, // harness status "broken"
+  "snake/deepseek-v3": { playable: 3, unplayable: 1 }, // 75% — mixed, below the bar
+  // Everything else (pong/qwen3-8b, pong/ministral-8b, snake/gemma-3-4b,
+  // snake/ministral-8b, breakout/gemini-flash-lite, breakout/deepseek-v3,
+  // breakout/ministral-8b) is left UNSCREENED so the Test Lab has work.
+};
 
 type Winner = "a" | "b" | "tie" | "both_bad";
 type GenStatus = "ok" | "no-html-found" | "broken";
@@ -190,19 +216,24 @@ async function loadGenSpecs(): Promise<{ specs: GenSpec[]; source: "manifest" | 
   return { specs, source: "fallback" };
 }
 
-// Synthetic votes/dev users are for dev + demo data only. Set SEED_SYNTHETIC_VOTES=false
-// when seeding production so the leaderboard starts empty and fills with real votes.
+// Synthetic votes/dev users are OPT-IN demo data only (owner decision 2026-07-02:
+// no fake votes — the arcade and leaderboard reflect real people or stay empty).
+// Set SEED_SYNTHETIC_VOTES=1 explicitly if you want demo votes in a throwaway DB.
 const SYNTHESIZE_VOTES =
-  process.env.SEED_SYNTHETIC_VOTES !== "false" && process.env.SEED_SYNTHETIC_VOTES !== "0";
+  process.env.SEED_SYNTHETIC_VOTES === "true" || process.env.SEED_SYNTHETIC_VOTES === "1";
 
 async function main() {
   console.log("Seeding arcade-bench…");
 
-  // Safety: re-seeding wipes ALL votes. If real (non-dev) graders have voted, this is
-  // production data loss — refuse unless explicitly forced.
-  const realVotes = await prisma.vote.count({
-    where: { user: { NOT: { provider: "dev" } } },
-  });
+  // Safety: re-seeding wipes ALL votes (pairwise + playability). If real (non-dev)
+  // graders have voted, this is production data loss — refuse unless explicitly forced.
+  const realVotes =
+    (await prisma.vote.count({
+      where: { user: { NOT: { provider: "dev" } } },
+    })) +
+    (await prisma.playabilityVote.count({
+      where: { user: { NOT: { provider: "dev" } } },
+    }));
   if (realVotes > 0 && process.env.FORCE_RESEED !== "1") {
     console.error(
       `Refusing to seed: ${realVotes} real vote(s) exist and re-seeding deletes them all.\n` +
@@ -212,6 +243,7 @@ async function main() {
   }
 
   // 1) Clear vote-derived + generation data (idempotent re-seed). Order respects FKs.
+  await prisma.playabilityVote.deleteMany({});
   await prisma.vote.deleteMany({});
   await prisma.rating.deleteMany({});
   await prisma.generation.deleteMany({});
@@ -349,6 +381,54 @@ async function main() {
   }
 
   console.log(`Total synthesized votes: ${voteCount}`);
+
+  // 6b) Synthesize playability verdicts (docs/ux-overhaul.md §7) over PUBLISHED builds.
+  // Each verdict comes from a distinct dev user (unique (userId, generationId)).
+  if (SYNTHESIZE_VOTES) {
+    let pvoteCount = 0;
+    const tally = { certified: 0, unplayable: 0, unscreened: 0 };
+    const screened = new Map<string, { playable: number; total: number }>();
+
+    for (const [key, plan] of Object.entries(PLAYABILITY_SEED)) {
+      const [gameSlug, modelSlug] = key.split("/");
+      const generationId = genId[gameSlug]?.[modelSlug];
+      if (!generationId) continue; // build not present (e.g. fallback specs)
+      if (!publishedByGame[gameSlug]?.includes(modelSlug)) continue; // never screen unpublished
+      const total = plan.playable + plan.unplayable;
+      if (total > users.length) throw new Error(`PLAYABILITY_SEED ${key}: needs ${total} users, have ${users.length}`);
+      for (let i = 0; i < total; i++) {
+        await prisma.playabilityVote.create({
+          data: { userId: users[i].id, generationId, playable: i < plan.playable },
+        });
+        pvoteCount++;
+      }
+      screened.set(key, { playable: plan.playable, total });
+    }
+
+    // Report the arcade state so the seed self-verifies (published builds only —
+    // unpublished ones never reach the Arcade or the Test Lab queue).
+    console.log(`\nPlayability screening (certified ≥ ${CERTIFIED_PLAYABLE_PCT}%):`);
+    for (const [gameSlug, modelSlugs] of Object.entries(publishedByGame)) {
+      for (const modelSlug of modelSlugs) {
+        const key = `${gameSlug}/${modelSlug}`;
+        const s = screened.get(key);
+        if (!s || s.total === 0) {
+          tally.unscreened++;
+          continue;
+        }
+        const pct = (s.playable / s.total) * 100;
+        const certified = pct >= CERTIFIED_PLAYABLE_PCT;
+        if (certified) tally.certified++;
+        else tally.unplayable++;
+        console.log(
+          `  ${key.padEnd(28)} ${s.playable}/${s.total} playable (${pct.toFixed(0)}%) ${certified ? "CERTIFIED" : "reported unplayable"}`,
+        );
+      }
+    }
+    console.log(
+      `Playability votes: ${pvoteCount} — ${tally.certified} certified, ${tally.unplayable} reported unplayable, ${tally.unscreened} unscreened.`,
+    );
+  }
 
   // 7) Compute + persist ratings.
   const { overallRows, perGameRows } = await recomputeAndStore();

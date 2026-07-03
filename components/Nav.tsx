@@ -1,7 +1,8 @@
 "use client";
 
 // Nav — sticky, cream@86% + backdrop blur, 2px ink bottom border (design.md §8).
-// Left: joystick glyph + `arcade-bench` wordmark (the `-` in blue). Center links.
+// Left: joystick glyph + `arcade-bench` wordmark (the `-` in blue). Center links
+// on md+; below md the links render as a compact pill row under the main bar.
 // Right: a coin chip with the signed-in grader's vote count + Clerk auth controls
 // (Sign in button when signed out, the Clerk UserButton when signed in). The vote count
 // comes from GET /api/session, which resolves the Clerk session via lib/auth.
@@ -14,8 +15,10 @@ import { Show, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import type { SessionUser } from "@/lib/types";
 import { JoystickIcon } from "./icons";
 
+// Arena is parked (route stays alive, just unlinked) — docs/ux-overhaul.md §7.
 const LINKS = [
-  { href: "/arena", label: "Arena" },
+  { href: "/arcade", label: "Arcade" },
+  { href: "/test", label: "Test Lab" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/history", label: "History" },
   { href: "/about", label: "How it works" },
@@ -56,7 +59,7 @@ export function Nav() {
           </span>
         </Link>
 
-        {/* Center: links */}
+        {/* Center: links (desktop) */}
         <ul className="ml-2 hidden items-center gap-5 md:flex">
           {LINKS.map((link) => {
             const active = pathname === link.href;
@@ -99,6 +102,28 @@ export function Nav() {
           </Show>
         </div>
       </nav>
+
+      {/* Mobile: second row of pill links (wraps at 390px; ≥40px tap targets) */}
+      <ul className="flex flex-wrap items-center gap-1 px-4 pb-2 md:hidden">
+        {LINKS.map((link) => {
+          const active = pathname === link.href;
+          return (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className={clsx(
+                  "inline-flex min-h-[40px] items-center rounded-full border-2 px-2.5 font-grotesk text-[13px] transition-colors",
+                  active
+                    ? "border-ink bg-cream-2 font-semibold text-ink"
+                    : "border-transparent text-ink-soft hover:text-ink",
+                )}
+              >
+                {link.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </header>
   );
 }

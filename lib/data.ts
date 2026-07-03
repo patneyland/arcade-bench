@@ -8,17 +8,21 @@ import { prisma } from "./db";
 import { getSessionUser } from "./auth";
 import { rateLimit } from "./rate-limit";
 import { recomputeAndStore } from "./rating/recompute";
-import { VENDOR_COLORS, VOTE_WINNERS } from "./constants";
+import { CERTIFIED_PLAYABLE_PCT, VENDOR_COLORS, VOTE_WINNERS } from "./constants";
 import type { CostTier, GameStatus, GenerationStatus } from "./constants";
 import type {
+  ArcadeEntry,
   ArenaBuild,
   ArenaPairing,
   GameView,
   LeaderboardQuery,
   LeaderboardRow,
   ModelView,
+  RecordPlayabilityInput,
+  RecordPlayabilityResult,
   RecordVoteInput,
   RecordVoteResult,
+  TestCandidate,
   TimelineEntry,
 } from "./types";
 
@@ -217,6 +221,36 @@ export async function getLeaderboard(
     },
   });
 
+  // Playability screening stats (docs/ux-overhaul.md §7), aggregated across ALL of a
+  // model's published generations regardless of the game filter — they describe the
+  // model's build reliability, not a per-game rating.
+  const pubGens = await prisma.generation.findMany({
+    where: { published: true },
+    select: { modelId: true, playabilityVotes: { select: { playable: true } } },
+  });
+  interface PlayabilityStat {
+    totalBuilds: number;
+    certifiedBuilds: number;
+    votes: number;
+    playableVotes: number;
+  }
+  const statsByModel = new Map<string, PlayabilityStat>();
+  for (const g of pubGens) {
+    let stat = statsByModel.get(g.modelId);
+    if (!stat) {
+      stat = { totalBuilds: 0, certifiedBuilds: 0, votes: 0, playableVotes: 0 };
+      statsByModel.set(g.modelId, stat);
+    }
+    stat.totalBuilds += 1;
+    const votes = g.playabilityVotes.length;
+    const playable = g.playabilityVotes.filter((v) => v.playable).length;
+    stat.votes += votes;
+    stat.playableVotes += playable;
+    if (votes > 0 && (playable / votes) * 100 >= CERTIFIED_PLAYABLE_PCT) {
+      stat.certifiedBuilds += 1;
+    }
+  }
+
   const rows: LeaderboardRow[] = [];
   for (const r of ratings) {
     const model = toModelView(r.model);
@@ -226,6 +260,7 @@ export async function getLeaderboard(
     const cents = model.costPerGen * 100;
     const ratingPerCent = cents > 0 ? r.rating / cents : null;
 
+    const stat = statsByModel.get(model.id);
     rows.push({
       rank: 0, // assigned after filtering so ranks are contiguous
       model,
@@ -233,6 +268,10 @@ export async function getLeaderboard(
       interval: r.interval,
       nVotes: r.nVotes,
       ratingPerCent,
+      playablePct:
+        stat && stat.votes > 0 ? (stat.playableVotes / stat.votes) * 100 : null,
+      certifiedBuilds: stat?.certifiedBuilds ?? 0,
+      totalBuilds: stat?.totalBuilds ?? 0,
     });
   }
 
@@ -344,6 +383,161 @@ export async function recordVote(
     reveal: {
       a: toModelView(genA.model),
       b: toModelView(genB.model),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Playability screening (docs/ux-overhaul.md §7).
+// Certified = playable votes / total votes ≥ CERTIFIED_PLAYABLE_PCT, no minimum
+// vote count, but zero votes is never certified.
+// ---------------------------------------------------------------------------
+
+/** Share of playability votes marked playable, 0–100. Zero votes -> 0. */
+function playablePctOf(votes: { playable: boolean }[]): number {
+  if (votes.length === 0) return 0;
+  const playable = votes.filter((v) => v.playable).length;
+  return (playable / votes.length) * 100;
+}
+
+/**
+ * Certified-playable builds for the public Arcade (identity shown — arcade visitors
+ * don't vote, so there's nothing to bias). Published generations with at least one
+ * playability vote and playable% ≥ CERTIFIED_PLAYABLE_PCT, ordered by game round
+ * then playable% desc.
+ */
+export async function getArcade(): Promise<ArcadeEntry[]> {
+  const gens = await prisma.generation.findMany({
+    where: { published: true, playabilityVotes: { some: {} } },
+    select: {
+      id: true,
+      artifactPath: true,
+      game: { select: GAME_SELECT },
+      model: { select: MODEL_SELECT },
+      playabilityVotes: { select: { playable: true } },
+    },
+  });
+
+  const entries: ArcadeEntry[] = [];
+  for (const g of gens) {
+    const playablePct = playablePctOf(g.playabilityVotes);
+    if (playablePct < CERTIFIED_PLAYABLE_PCT) continue;
+    entries.push({
+      generationId: g.id,
+      artifactPath: g.artifactPath,
+      game: toGameView(g.game),
+      model: toModelView(g.model),
+      playablePct,
+      votes: g.playabilityVotes.length,
+    });
+  }
+
+  entries.sort(
+    (a, b) =>
+      a.game.roundOrder - b.game.roundOrder || b.playablePct - a.playablePct,
+  );
+  return entries;
+}
+
+/**
+ * Next build for a signed-in tester to screen: among published generations the user
+ * has NOT yet playability-voted on, the one with the fewest playability votes
+ * (tie-break: oldest createdAt). Model identity OMITTED — hidden until the verdict.
+ * Null when the queue is empty or the caller is unauthenticated (the route layer
+ * distinguishes those two by checking the session itself).
+ */
+export async function getNextTestCandidate(): Promise<TestCandidate | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  const gen = await prisma.generation.findFirst({
+    where: {
+      published: true,
+      playabilityVotes: { none: { userId: user.id } },
+    },
+    orderBy: [{ playabilityVotes: { _count: "asc" } }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      artifactPath: true,
+      game: { select: GAME_SELECT },
+      _count: { select: { playabilityVotes: true } },
+    },
+  });
+  if (!gen) return null;
+
+  return {
+    generationId: gen.id,
+    artifactPath: gen.artifactPath,
+    game: toGameView(gen.game),
+    votes: gen._count.playabilityVotes,
+    // model intentionally omitted — revealed only after the playability verdict.
+  };
+}
+
+/**
+ * Record a playable/not-playable verdict with the same enforcement tiers as recordVote:
+ *  - requires a grader session (else "unauthenticated")
+ *  - validates the generation exists and is published, and that `playable` is a real
+ *    boolean (else "invalid")
+ *  - applies a light per-user rate limit (else "rate_limited")
+ *  - enforces one-verdict-per-build via the unique (userId, generationId) constraint
+ *    (else "duplicate")
+ * On success: reveals the model plus the updated playable% / vote count / certified
+ * state (including this vote). No rating recompute — playability doesn't touch Elo.
+ */
+export async function recordPlayabilityVote(
+  input: RecordPlayabilityInput,
+): Promise<RecordPlayabilityResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  if (!input.generationId || typeof input.playable !== "boolean") {
+    return { ok: false, error: "invalid" };
+  }
+
+  const gen = await prisma.generation.findUnique({
+    where: { id: input.generationId },
+    select: { id: true, published: true, model: { select: MODEL_SELECT } },
+  });
+  if (!gen || !gen.published) return { ok: false, error: "invalid" };
+
+  // Light rate limit (per user).
+  if (!rateLimit(`pvote:${user.id}`, VOTE_RATE_LIMIT)) {
+    return { ok: false, error: "rate_limited" };
+  }
+
+  // Create the verdict; the unique (userId, generationId) constraint enforces dedup.
+  try {
+    await prisma.playabilityVote.create({
+      data: {
+        userId: user.id,
+        generationId: gen.id,
+        playable: input.playable,
+      },
+    });
+  } catch (err) {
+    if (isUniqueConstraintError(err)) {
+      return { ok: false, error: "duplicate" };
+    }
+    throw err;
+  }
+
+  // The reveal: updated stats including this vote.
+  const votes = await prisma.playabilityVote.findMany({
+    where: { generationId: gen.id },
+    select: { playable: true },
+  });
+  const playablePct = playablePctOf(votes);
+  const certified =
+    votes.length > 0 && playablePct >= CERTIFIED_PLAYABLE_PCT;
+
+  return {
+    ok: true,
+    reveal: {
+      model: toModelView(gen.model),
+      playablePct,
+      votes: votes.length,
+      certified,
     },
   };
 }

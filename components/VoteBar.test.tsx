@@ -31,6 +31,11 @@ const pairing: ArenaPairing = {
   b: { generationId: "gen-b", artifactPath: "/artifacts/pong/b.html", status: "ok" },
 };
 
+const reveal = {
+  a: { id: "ma", slug: "gemma", name: "Gemma 3 4B", vendor: "Google", paramSize: "4B", costPerGen: 0.003, tier: "featherweight" },
+  b: { id: "mb", slug: "qwen", name: "Qwen3 4B", vendor: "Alibaba", paramSize: "4B", costPerGen: 0.004, tier: "featherweight" },
+};
+
 beforeEach(() => {
   vi.restoreAllMocks();
 });
@@ -40,13 +45,14 @@ afterEach(() => {
 });
 
 describe("VoteBar", () => {
-  it("renders the four vote controls", () => {
+  it("renders the four vote controls and the single judging line", () => {
     vi.stubGlobal("fetch", vi.fn());
     const { getByText } = render(<VoteBar pairing={pairing} />);
     expect(getByText("← A is better")).toBeInTheDocument();
     expect(getByText("B is better →")).toBeInTheDocument();
     expect(getByText("Tie")).toBeInTheDocument();
     expect(getByText("Both bad")).toBeInTheDocument();
+    expect(getByText(/Judge faithfulness to the original/i)).toBeInTheDocument();
   });
 
   it("posts the correct winner to /api/vote when 'A is better' is clicked", async () => {
@@ -87,37 +93,69 @@ describe("VoteBar", () => {
     expect(body.winner).toBe("both_bad");
   });
 
-  it("reveals both model identities on a successful vote", async () => {
+  it("reveals both model identities on a successful vote, highlighting the pick", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({
-        ok: true,
-        reveal: {
-          a: { id: "ma", slug: "gemma", name: "Gemma 3 4B", vendor: "Google", paramSize: "4B", costPerGen: 0.003, tier: "featherweight" },
-          b: { id: "mb", slug: "qwen", name: "Qwen3 4B", vendor: "Alibaba", paramSize: "4B", costPerGen: 0.004, tier: "featherweight" },
-        },
-      }),
+      json: async () => ({ ok: true, reveal }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { getByText, findByText } = render(<VoteBar pairing={pairing} />);
+    const onRevealed = vi.fn();
+    const { getByText, findByText } = render(
+      <VoteBar pairing={pairing} onRevealed={onRevealed} />,
+    );
     fireEvent.click(getByText("B is better →"));
 
     expect(await findByText("Gemma 3 4B")).toBeInTheDocument();
     expect(getByText("Qwen3 4B")).toBeInTheDocument();
-    expect(getByText("Next match →")).toBeInTheDocument();
+    expect(getByText("NEXT ROUND →")).toBeInTheDocument();
+    expect(getByText(/your pick/i)).toBeInTheDocument();
+    expect(onRevealed).toHaveBeenCalledTimes(1);
   });
 
-  it("prompts a sign-in when the vote returns unauthenticated", async () => {
+  it("shows the client-side session tally on the reveal step", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, reveal }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { getByText, findByText } = render(<VoteBar pairing={pairing} sessionTally={2} />);
+    fireEvent.click(getByText("Tie"));
+
+    expect(await findByText(/2 rounds judged this session/i)).toBeInTheDocument();
+  });
+
+  it("nudges the voter to play both builds first, without disabling the vote", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const { getByText, queryByText, rerender } = render(
+      <VoteBar pairing={pairing} bothPlayed={false} />,
+    );
+    expect(getByText(/play both builds, then vote/i)).toBeInTheDocument();
+    expect((getByText("← A is better") as HTMLButtonElement).disabled).toBe(false);
+    rerender(<VoteBar pairing={pairing} bothPlayed />);
+    expect(queryByText(/play both builds, then vote/i)).toBeNull();
+  });
+
+  it("offers a 'go back and replay' link that returns the flow to the play step", () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const onBack = vi.fn();
+    const { getByRole } = render(<VoteBar pairing={pairing} onBack={onBack} />);
+    fireEvent.click(getByRole("button", { name: /go back and replay/i }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("prompts sign-in with a real primary button when the vote returns unauthenticated", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: false, error: "unauthenticated" }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const { getByText, findByText } = render(<VoteBar pairing={pairing} />);
+    const { getByText, findByText, getByRole } = render(<VoteBar pairing={pairing} />);
     fireEvent.click(getByText("← A is better"));
 
     expect(await findByText(/You need to sign in to vote/i)).toBeInTheDocument();
+    expect(getByRole("button", { name: /sign in and record this vote/i })).toBeInTheDocument();
   });
 });

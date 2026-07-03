@@ -1,15 +1,17 @@
 "use client";
 
-// VoteBar — the arena's four vote controls (design.md §5).
+// VoteBar — the verdict + reveal steps of the arena round flow (design.md §5,
+// docs/ux-overhaul.md §1). Rendered where the stage was, not as a sidebar:
 //
-//   [ ← A is better (blue) ] [ B is better → (red) ]   <- 1fr 1fr, extra padding
+//   [ ← A is better (blue) ] [ B is better → (red) ]   <- 1fr 1fr, the primary act
 //          [ Tie ]   [ Both bad (danger) ]             <- centered secondary row
 //
 // On click → POST /api/vote { gameId, genAId, genBId, winner }. On success the two
-// model identities are revealed (badges). If the user is not signed in the response
-// is { error: "unauthenticated" } — we surface a Clerk sign-in prompt, and once the user
-// signs in the pending vote is retried automatically.
-// "Next match" loads a fresh pairing via GET /api/arena/next?game=<slug>.
+// model identities are revealed (badges), with the voter's pick highlighted. If the
+// user is not signed in the response is { error: "unauthenticated" } — we surface a
+// Clerk sign-in prompt (a real primary button), and once the user signs in the
+// pending vote is retried automatically.
+// "NEXT ROUND →" loads a fresh pairing via GET /api/arena/next?game=<slug>.
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -20,13 +22,29 @@ import { VendorBadge, ParamChip, CostChip } from "./Badges";
 
 interface VoteBarProps {
   pairing: ArenaPairing;
-  /** Called with a fresh pairing when "Next match" loads one (e.g. to swap in the parent). */
+  /** Called with a fresh pairing when "NEXT ROUND" loads one (e.g. to swap in the parent). */
   onNext?: (next: ArenaPairing | null) => void;
+  /** Have both builds been started? When false, show a soft "play both first" nudge
+   *  (votes are never hard-gated — a build that won't even start deserves its loss). */
+  bothPlayed?: boolean;
+  /** "↩ go back and replay" — returns the flow to the play step (hidden after reveal). */
+  onBack?: () => void;
+  /** Fires once when a vote succeeds and the identities are revealed. */
+  onRevealed?: () => void;
+  /** Rounds judged this session (client-side tally, shown on the reveal step). */
+  sessionTally?: number;
 }
 
 type Reveal = { a: ModelView; b: ModelView };
 
-export function VoteBar({ pairing, onNext }: VoteBarProps) {
+export function VoteBar({
+  pairing,
+  onNext,
+  bothPlayed = true,
+  onBack,
+  onRevealed,
+  sessionTally,
+}: VoteBarProps) {
   const router = useRouter();
   const { isSignedIn } = useUser();
   const [pending, setPending] = useState<VoteWinner | null>(null);
@@ -65,6 +83,7 @@ export function VoteBar({ pairing, onNext }: VoteBarProps) {
       const data: RecordVoteResult = await res.json();
       if (data.ok && data.reveal) {
         setReveal(data.reveal);
+        onRevealed?.();
       } else if (data.error === "unauthenticated") {
         setNeedsSignIn(true);
       } else {
@@ -90,8 +109,13 @@ export function VoteBar({ pairing, onNext }: VoteBarProps) {
 
   if (reveal) {
     return (
-      <div className="bg-cream-2 p-5">
-        <Revealed reveal={reveal} winner={lastWinnerLabel(castWinner)} onNext={loadNext} />
+      <div className="bg-cream-2 p-5 sm:p-8">
+        <Revealed
+          reveal={reveal}
+          winner={castWinner}
+          sessionTally={sessionTally}
+          onNext={loadNext}
+        />
       </div>
     );
   }
@@ -99,66 +123,91 @@ export function VoteBar({ pairing, onNext }: VoteBarProps) {
   const voted = pending !== null;
 
   return (
-    <div className="bg-cream-2 p-5">
-      {needsSignIn && (
-        <div className="mb-4 rounded-chip border-2 border-ink bg-yellow/30 px-4 py-3 font-sans text-sm">
-          You need to sign in to vote.{" "}
-          <SignInButton mode="modal">
-            <button className="font-grotesk font-semibold underline underline-offset-2">
-              Sign in and record this vote
-            </button>
-          </SignInButton>
-        </div>
-      )}
-      {error && (
-        <div className="mb-4 rounded-chip border-2 border-danger px-4 py-3 font-sans text-sm text-danger">
-          {error}
-        </div>
-      )}
-
-      {/* Top row: A / B side by side, extra padding so they read as the primary act. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          className="btn rounded-btn border-2 border-ink bg-blue px-5 py-[15px] font-grotesk font-semibold text-white shadow-hard-sm hover:bg-blue-deep disabled:opacity-60"
-          onClick={() => castVote("a")}
-          disabled={voted}
-          aria-label="Build A is better"
-        >
-          ← A is better
-        </button>
-        <button
-          className="btn rounded-btn border-2 border-ink bg-red px-5 py-[15px] font-grotesk font-semibold text-white shadow-hard-sm hover:brightness-95 disabled:opacity-60"
-          onClick={() => castVote("b")}
-          disabled={voted}
-          aria-label="Build B is better"
-        >
-          B is better →
-        </button>
-      </div>
-
-      {/* Secondary row: Tie and Both bad, centered. */}
-      <div className="mt-3 flex flex-wrap justify-center gap-3">
-        <button
-          className="btn rounded-btn border-2 border-ink bg-surface px-5 py-2.5 font-grotesk font-semibold text-ink shadow-hard-sm disabled:opacity-60"
-          onClick={() => castVote("tie")}
-          disabled={voted}
-        >
-          Tie
-        </button>
-        <button
-          className="btn rounded-btn border-2 border-danger bg-surface px-5 py-2.5 font-grotesk font-semibold text-danger shadow-[3px_3px_0_#E23B3B] active:shadow-none disabled:opacity-60"
-          onClick={() => castVote("both_bad")}
-          disabled={voted}
-        >
-          Both bad
-        </button>
-      </div>
-
-      {voted && !needsSignIn && (
-        <p className="mt-3 text-center font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft">
-          Recording vote…
+    <div className="bg-cream-2 p-5 sm:p-8">
+      <div className="mx-auto max-w-[760px]">
+        <p className="mb-3 text-center font-display text-[13px] leading-none">THE VERDICT</p>
+        <p className="mb-5 text-center font-sans text-[14px] text-ink-soft">
+          Judge faithfulness to the original, playability, and fun — not just looks.
         </p>
-      )}
+
+        {needsSignIn && (
+          <div className="mb-4 flex flex-col items-center gap-3 rounded-chip border-2 border-ink bg-yellow/30 px-4 py-4 text-center font-sans text-sm">
+            <p>You need to sign in to vote — your pick is cast right after.</p>
+            <SignInButton mode="modal">
+              <button className="btn rounded-btn border-2 border-ink bg-blue px-5 py-2.5 font-grotesk font-semibold text-white shadow-hard-sm hover:bg-blue-deep">
+                Sign in and record this vote
+              </button>
+            </SignInButton>
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 rounded-chip border-2 border-danger px-4 py-3 text-center font-sans text-sm text-danger">
+            {error}
+          </div>
+        )}
+
+        {!bothPlayed && (
+          <p className="mb-3 text-center font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft">
+            ▶ Play both builds, then vote
+          </p>
+        )}
+
+        {/* Top row: A / B side by side, extra padding so they read as the primary act. */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            className="btn rounded-btn border-2 border-ink bg-blue px-5 py-5 font-grotesk text-[17px] font-semibold text-white shadow-hard-sm hover:bg-blue-deep disabled:opacity-60 sm:py-6"
+            onClick={() => castVote("a")}
+            disabled={voted}
+            aria-label="Build A is better"
+          >
+            ← A is better
+          </button>
+          <button
+            className="btn rounded-btn border-2 border-ink bg-red px-5 py-5 font-grotesk text-[17px] font-semibold text-white shadow-hard-sm hover:brightness-95 disabled:opacity-60 sm:py-6"
+            onClick={() => castVote("b")}
+            disabled={voted}
+            aria-label="Build B is better"
+          >
+            B is better →
+          </button>
+        </div>
+
+        {/* Secondary row: Tie and Both bad, centered. */}
+        <div className="mt-3 flex flex-wrap justify-center gap-3">
+          <button
+            className="btn rounded-btn border-2 border-ink bg-surface px-6 py-3 font-grotesk font-semibold text-ink shadow-hard-sm disabled:opacity-60"
+            onClick={() => castVote("tie")}
+            disabled={voted}
+          >
+            Tie
+          </button>
+          <button
+            className="btn rounded-btn border-2 border-danger bg-surface px-6 py-3 font-grotesk font-semibold text-danger shadow-[3px_3px_0_#E23B3B] active:shadow-none disabled:opacity-60"
+            onClick={() => castVote("both_bad")}
+            disabled={voted}
+          >
+            Both bad
+          </button>
+        </div>
+
+        {voted && !needsSignIn && (
+          <p className="mt-3 text-center font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft">
+            Recording vote…
+          </p>
+        )}
+
+        {onBack && (
+          <div className="mt-5 text-center">
+            <button
+              type="button"
+              onClick={onBack}
+              className="font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft underline underline-offset-4 hover:text-ink"
+            >
+              ↩ go back and replay
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -166,28 +215,36 @@ export function VoteBar({ pairing, onNext }: VoteBarProps) {
 function Revealed({
   reveal,
   winner,
+  sessionTally,
   onNext,
 }: {
   reveal: Reveal;
-  winner: string | null;
+  winner: VoteWinner | null;
+  sessionTally?: number;
   onNext: () => void;
 }) {
+  const label = lastWinnerLabel(winner);
   return (
-    <div>
+    <div className="mx-auto max-w-[760px]">
       <p className="mb-4 text-center font-grotesk text-lg font-bold">
-        Vote recorded{winner ? ` · ${winner}` : ""} — identities revealed
+        Vote recorded{label ? ` · ${label}` : ""} — identities revealed
       </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <RevealCard side="A" model={reveal.a} accent="blue" />
-        <RevealCard side="B" model={reveal.b} accent="red" />
+        <RevealCard side="A" model={reveal.a} accent="blue" picked={winner === "a"} />
+        <RevealCard side="B" model={reveal.b} accent="red" picked={winner === "b"} />
       </div>
-      <div className="mt-5 flex justify-center">
+      <div className="mt-6 flex flex-col items-center gap-2.5">
         <button
-          className="btn rounded-btn border-2 border-ink bg-blue px-6 py-3 font-grotesk font-semibold text-white shadow-hard-sm hover:bg-blue-deep"
+          className="btn rounded-btn border-2 border-ink bg-blue px-8 py-4 font-grotesk text-[17px] font-semibold text-white shadow-hard-sm hover:bg-blue-deep"
           onClick={onNext}
         >
-          Next match →
+          NEXT ROUND →
         </button>
+        {sessionTally != null && sessionTally > 0 && (
+          <p className="font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft">
+            {sessionTally} round{sessionTally === 1 ? "" : "s"} judged this session
+          </p>
+        )}
       </div>
     </div>
   );
@@ -197,14 +254,21 @@ function RevealCard({
   side,
   model,
   accent,
+  picked,
 }: {
   side: "A" | "B";
   model: ModelView;
   accent: "blue" | "red";
+  picked: boolean;
 }) {
   return (
-    <div className="rounded-chip border-2 border-ink bg-surface p-4">
-      <div className="mb-2 flex items-center gap-2">
+    <div
+      className={clsx(
+        "rounded-chip border-2 border-ink bg-surface p-4",
+        picked && (accent === "blue" ? "ring-[3px] ring-blue" : "ring-[3px] ring-red"),
+      )}
+    >
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <span
           className={clsx(
             "rounded px-2 py-0.5 font-display text-[10px] text-white",
@@ -214,6 +278,11 @@ function RevealCard({
           BUILD {side}
         </span>
         <span className="font-grotesk font-bold">{model.name}</span>
+        {picked && (
+          <span className="ml-auto rounded-chip bg-yellow px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-ink">
+            ★ your pick
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <VendorBadge vendor={model.vendor} />

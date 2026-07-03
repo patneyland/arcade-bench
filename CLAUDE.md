@@ -3,6 +3,20 @@
 A community-voted arena ranking cost-efficient AI models on how well they recreate
 classic games. See `PLAN.md`, `PRD.md`, `design.md` for product + visual spec.
 
+## CURRENT WORK: UX overhaul (`docs/ux-overhaul.md`)
+
+`docs/ux-overhaul.md` is the working document — keep its checkboxes current.
+**Next up: item 7, the playability-screening product pivot** (owner decision
+2026-07-02): signed-out visitors play only certified-playable builds (the Arcade,
+`/arcade`); signed-in users are testers who screen builds one at a time in the Test
+Lab (`/test`, playable / not playable); certified = ≥85% playable votes
+(`CERTIFIED_PLAYABLE_PCT`, no minimum count, zero votes ≠ certified). Head-to-head
+A/B voting is PARKED (keep the code; `/arena` stays routable but out of the nav)
+until additional judging criteria arrive. Contracts for the pivot are already in
+`lib/types.ts`, `lib/constants.ts`, `prisma/schema.prisma` (`PlayabilityVote`), and
+stubbed in `lib/data.ts`. Do NOT add in-game control hints or touch the locked
+generation prompt (explicitly deferred by the owner, repeatedly).
+
 ## Stack
 - **Next.js 15 (App Router) + React 19 + TypeScript**, Tailwind v3.
 - **Prisma + Postgres (Supabase)**. Local dev runs a local Supabase stack via Docker

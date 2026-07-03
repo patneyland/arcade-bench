@@ -39,3 +39,9 @@ export type GenerationStatus = (typeof GENERATION_STATUSES)[number];
 
 /** Default starting rating for the Elo / Bradley-Terry engine. */
 export const DEFAULT_RATING = 1000;
+
+/** Playability certification (product pivot 2026-07-02, docs/ux-overhaul.md §7):
+ *  a build is certified once ≥85% of its playability votes say "playable".
+ *  Threshold only — no minimum vote count (owner decision), but zero votes is
+ *  never certified (an unscreened build stays out of the public Arcade). */
+export const CERTIFIED_PLAYABLE_PCT = 85;

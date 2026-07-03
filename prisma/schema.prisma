@@ -64,10 +64,11 @@ model Generation {
   status       String     @default("ok") // ok | no-html-found | broken
   published    Boolean    @default(false)
   createdAt    DateTime   @default(now())
-  model        Model      @relation(fields: [modelId], references: [id], onDelete: Cascade)
-  game         Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  votesAsA     Vote[]     @relation("genA")
-  votesAsB     Vote[]     @relation("genB")
+  model            Model             @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  game             Game              @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  votesAsA         Vote[]            @relation("genA")
+  votesAsB         Vote[]            @relation("genB")
+  playabilityVotes PlayabilityVote[]
 
   @@index([gameId, published])
   @@index([modelId])
@@ -75,12 +76,29 @@ model Generation {
 
 /// A grader. Keyed by the auth provider's stable id (Clerk/OAuth, or a dev id).
 model User {
-  id        String   @id @default(cuid())
-  authId    String   @unique
-  provider  String? // github | google | dev
-  handle    String?
-  createdAt DateTime @default(now())
-  votes     Vote[]
+  id                String             @id @default(cuid())
+  authId            String             @unique
+  provider          String? // github | google | dev
+  handle            String?
+  createdAt         DateTime           @default(now())
+  votes             Vote[]
+  playabilityVotes  PlayabilityVote[]
+}
+
+/// One tester's verdict on one build: playable or not (docs/ux-overhaul.md §7).
+/// A build is "certified" once ≥ CERTIFIED_PLAYABLE_PCT of its votes are playable
+/// (no minimum vote count); only certified builds appear in the public Arcade.
+model PlayabilityVote {
+  id           String     @id @default(cuid())
+  userId       String
+  generationId String
+  playable     Boolean
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, generationId])
+  @@index([generationId])
 }
 
 /// One pairwise vote. Unique per (user, pairing) to enforce one-vote-per-pairing.

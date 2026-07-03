@@ -1,6 +1,6 @@
 // About — "How it works" + methodology. Copy grounded in README / PRD / PLAN.
 
-import { LOCKED_PROMPT } from "@/lib/constants";
+import { BUILD_A, BUILD_B, LOCKED_PROMPT } from "@/lib/constants";
 import { Container } from "@/components/Layout";
 import { ButtonLink } from "@/components/Button";
 
@@ -17,7 +17,8 @@ export default function AboutPage() {
         <div className="max-w-[68ch]">
           <span className="eyebrow mb-4 inline-flex">How it works</span>
           <h1 className="font-grotesk text-[30px] font-bold tracking-[-0.01em]">
-            A play-and-vote arena for AI rebuilding the history of games
+            A <span className="text-blue">play</span>-and-<span className="text-red">vote</span>{" "}
+            arena for AI rebuilding the history of games
           </h1>
           <p className="mt-4 font-sans text-[18px] leading-relaxed text-ink-soft">
             Every frontier model can build Pong, so testing them is boring. The interesting
@@ -29,7 +30,8 @@ export default function AboutPage() {
           <Step n={1} title="One locked prompt, never tuned">
             Each model gets the same single sentence per game — only the game name changes. This
             is a benchmark of <strong className="text-ink">models</strong>, not of prompting.
-            <pre className="mt-3 overflow-x-auto rounded-chip border-2 border-ink bg-cream-2 px-4 py-3 font-mono text-[13px]">
+            {/* Wraps at small widths — the full sentence must always be readable. */}
+            <pre className="mt-3 whitespace-pre-wrap break-words rounded-chip border-2 border-ink bg-cream-2 px-4 py-3 font-mono text-[13px]">
               {LOCKED_PROMPT("{game}")}
             </pre>
           </Step>
@@ -56,6 +58,19 @@ export default function AboutPage() {
             tie or both bad. Pairwise comparison is far more reliable than asking for a 1–5
             score, and it is what makes the rating math work. Anyone can play; casting a vote
             takes a quick sign-in so the human grading stays honest.
+            {/* Mini A/B identity primer — A is always blue, B is always red. */}
+            <span className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-chip border-2 border-ink bg-blue px-2.5 py-1.5 font-display text-[9px] leading-none text-white shadow-hard-sm">
+                {BUILD_A.label}
+              </span>
+              <span className="font-grotesk text-[13px] font-bold text-ink-soft">vs</span>
+              <span className="inline-flex items-center rounded-chip border-2 border-ink bg-red px-2.5 py-1.5 font-display text-[9px] leading-none text-white shadow-hard-sm">
+                {BUILD_B.label}
+              </span>
+              <span className="inline-flex items-center rounded-full border-2 border-dashed border-ink-soft px-2.5 py-1 font-mono text-[11px] text-ink-soft">
+                model hidden
+              </span>
+            </span>
           </Step>
 
           <Step n={5} title="Elo → Bradley-Terry ratings">

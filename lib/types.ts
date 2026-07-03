@@ -30,6 +30,11 @@ export interface LeaderboardRow {
   interval: number; // +/- CI half-width
   nVotes: number;
   ratingPerCent: number | null; // rating per cent of cost; null if cost is 0
+  // Playability screening stats (docs/ux-overhaul.md §7). Optional so pre-pivot
+  // call sites keep compiling; render "—" when absent.
+  playablePct?: number | null; // share of playability votes marked playable, 0–100
+  certifiedBuilds?: number; // builds at/above CERTIFIED_PLAYABLE_PCT
+  totalBuilds?: number; // published builds screened or awaiting screening
 }
 
 /** One side of an arena pairing — identity hidden until the vote is cast. */
@@ -91,4 +96,46 @@ export interface SessionUser {
   handle: string | null;
   provider: string | null;
   voteCount: number;
+}
+
+// ---------------------------------------------------------------------------
+// Playability screening (product pivot 2026-07-02 — docs/ux-overhaul.md §7).
+// Signed-out visitors play only certified builds (the Arcade); signed-in users
+// screen unvetted builds one at a time (the Test Lab).
+// ---------------------------------------------------------------------------
+
+/** A certified-playable build in the public Arcade. Identity is SHOWN here —
+ *  arcade visitors don't vote, so there's nothing to bias. */
+export interface ArcadeEntry {
+  generationId: string;
+  artifactPath: string;
+  game: GameView;
+  model: ModelView;
+  playablePct: number; // 0–100
+  votes: number;
+}
+
+/** One build in the signed-in testing queue — model hidden until the vote. */
+export interface TestCandidate {
+  generationId: string;
+  artifactPath: string;
+  game: GameView;
+  votes: number; // playability votes cast so far (by anyone)
+}
+
+export interface RecordPlayabilityInput {
+  generationId: string;
+  playable: boolean;
+}
+
+export interface RecordPlayabilityResult {
+  ok: boolean;
+  error?: "unauthenticated" | "duplicate" | "invalid" | "rate_limited";
+  // Revealed after a successful playability vote:
+  reveal?: {
+    model: ModelView;
+    playablePct: number; // including this vote
+    votes: number;
+    certified: boolean;
+  };
 }

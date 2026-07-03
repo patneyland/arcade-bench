@@ -6,7 +6,8 @@ import { Container } from "@/components/Layout";
 
 export const metadata = {
   title: "History · arcade-bench",
-  description: "The game roster walks forward through video game history, 1952 to present.",
+  description:
+    "The game roster walks forward through video game history — from gaming's dawn toward the present, one round at a time.",
 };
 
 // Game statuses (live / now / upcoming) come from the DB and change between deploys.
@@ -21,21 +22,22 @@ export default async function HistoryPage() {
         <div className="mb-7 max-w-[64ch]">
           <span className="eyebrow mb-4 inline-flex">History</span>
           <h1 className="font-grotesk text-[30px] font-bold tracking-[-0.01em]">
-            Walking through history, 1952 → present
+            Walking through video game history
           </h1>
           <p className="mt-3 font-sans text-[17px] leading-relaxed text-ink-soft">
-            The roster is the backbone. We start at the dawn of gaming — when games were
-            simple enough that a small model has a real shot — and add one game per round,
-            moving forward in time. The rising difficulty is exactly where each model's
-            ceiling shows up.
+            The roster is the backbone. The track starts at the dawn of gaming — when games
+            were simple enough that a small model has a real shot — and adds one game per
+            round, moving forward in time. The rising difficulty is exactly where each
+            model&apos;s ceiling shows up. What you see below is chapter one, not the whole
+            story: more rounds are coming.
           </p>
         </div>
 
-        <HistoryTimeline entries={entries} />
+        <HistoryTimeline entries={entries} expanded />
 
         <div className="mt-8 flex flex-wrap gap-4 font-sans text-[13px] text-ink-soft">
-          <LegendItem swatch="bg-win" label="Live — votes are open" />
-          <LegendItem swatch="bg-yellow" label="Now — the current round" />
+          <LegendItem swatch="bg-win" label="Live — a past round, votes open" />
+          <LegendItem swatch="bg-yellow" label="Now — the current round, votes open" />
           <LegendItem swatch="border-dashed bg-surface" label="Upcoming — not yet built" border />
         </div>
       </Container>
