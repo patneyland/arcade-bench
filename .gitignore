@@ -1,0 +1,29 @@
+﻿# dependencies
+node_modules/
+harness/node_modules/
+
+# next
+.next/
+out/
+next-env.d.ts
+
+# prisma / db
+*.db
+*.db-journal
+prisma/dev.db*
+
+# env
+.env*
+.env*.local
+!.env.example
+
+# test / coverage
+coverage/
+
+# misc
+.DS_Store
+*.log
+.vercel
+*.tsbuildinfo
+
+.vercel

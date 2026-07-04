@@ -1,0 +1,7 @@
+[
+  { "slug": "pong", "name": "Pong", "year": 1972, "creator": "Atari" },
+  { "slug": "snake", "name": "Snake", "year": 1976, "creator": "Gremlin" },
+  { "slug": "breakout", "name": "Breakout", "year": 1976, "creator": "Atari" },
+  { "slug": "space-invaders", "name": "Space Invaders", "year": 1978, "creator": "Taito" },
+  { "slug": "asteroids", "name": "Asteroids", "year": 1979, "creator": "Atari" }
+]

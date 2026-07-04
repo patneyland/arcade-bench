@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pong Game</title>
+<style>
+  body {
+    margin: 0;
+    background: black;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    margin: auto;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+<canvas id="pong" width="800" height="600"></canvas>
+<script>
+const canvas = document.getElementById('pong');
+const ctx = canvas.getContext('2d');
+
+const paddleWidth = 10;
+const paddleHeight = 100;
+
+// Positions for paddles
+let leftPaddleY = (canvas.height - paddleHeight) / 2;
+let rightPaddleY = (canvas.height - paddleHeight) / 2;
+
+// Ball position and velocity
+let ballX = canvas.width / 2;
+let ballY = canvas.height / 2;
+let ballSpeedX = 4;
+let ballSpeedY = 4;
+
+// Scores
+let leftScore = 0;
+let rightScore = 0;
+
+// Control keys
+const keys = {
+  w: false,
+  s: false,
+  up: false,
+  down: false
+};
+
+// Event listeners for controls
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'w':
+    case 'W':
+      keys.w = true;
+      break;
+    case 's':
+    case 'S':
+      keys.s = true;
+      break;
+    case 'ArrowUp':
+      keys.up = true;
+      break;
+    case 'ArrowDown':
+      keys.down = true;
+      break;
+  }
+});
+document.addEventListener('keyup', (e) => {
+  switch (e.key) {
+    case 'w':
+    case 'W':
+      keys.w = false;
+      break;
+    case 's':
+    case 'S':
+      keys.s = false;
+      break;
+    case 'ArrowUp':
+      keys.up = false;
+      break;
+    case 'ArrowDown':
+      keys.down = false;
+      break;
+  }
+});
+
+// Game loop
+function game() {
+  update();
+  draw();
+  requestAnimationFrame(game);
+}
+
+function update() {
+  // Move left paddle (player)
+  if (keys.w && leftPaddleY > 0) {
+    leftPaddleY -= 5;
+  }
+  if (keys.s && leftPaddleY < canvas.height - paddleHeight) {
+    leftPaddleY += 5;
+  }
+  // Move right paddle (AI or second player)
+  if (keys.up && rightPaddleY > 0) {
+    rightPaddleY -= 5;
+  }
+  if (keys.down && rightPaddleY < canvas.height - paddleHeight) {
+    rightPaddleY += 5;
+  }
+
+  // Update ball position
+  ballX += ballSpeedX;
+  ballY += ballSpeedY;
+
+  // Collisions with top and bottom walls
+  if (ballY <= 0 || ballY >= canvas.height) {
+    ballSpeedY = -ballSpeedY;
+  }
+
+  // Collisions with paddles
+  // Left paddle
+  if (
+    ballX - 10 <= paddleWidth && 
+    ballY >= leftPaddleY && 
+    ballY <= leftPaddleY + paddleHeight
+  ) {
+    ballSpeedX = -ballSpeedX;
+    // Optional: add some control over bounce angle
+  }
+  // Right paddle
+  if (
+    ballX + 10 >= canvas.width - paddleWidth && 
+    ballY >= rightPaddleY && 
+    ballY <= rightPaddleY + paddleHeight
+  ) {
+    ballSpeedX = -ballSpeedX;
+  }
+
+  // Score update
+  if (ballX < 0) {
+    rightScore++;
+    resetBall();
+  } else if (ballX > canvas.width) {
+    leftScore++;
+    resetBall();
+  }
+}
+
+function resetBall() {
+  ballX = canvas.width / 2;
+  ballY = canvas.height / 2;
+  // Reset ball to random direction
+  ballSpeedX = (Math.random() > 0.5 ? 4 : -4);
+  ballSpeedY = (Math.random() > 0.5 ? 4 : -4);
+}
+
+function draw() {
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw paddles
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, leftPaddleY, paddleWidth, paddleHeight);
+  ctx.fillRect(canvas.width - paddleWidth, rightPaddleY, paddleWidth, paddleHeight);
+
+  // Draw ball
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Draw scores
+  ctx.font = '32px Arial';
+  ctx.fillText(leftScore, canvas.width / 4, 50);
+  ctx.fillText(rightScore, 3 * canvas.width / 4, 50);
+}
+
+// Start game
+game();
+</script>
+</body>
+</html>
