@@ -9,6 +9,8 @@
  *   npm run generate -- --game pong               # all models for pong
  *   npm run generate -- --model qwen3-4b          # one model, all games
  *   npm run generate -- --all --samples 1         # everything
+ *   npm run generate -- --model gpt-5-5 --samples 1 --max-tokens 24000
+ *                                                 # bigger completion budget (reasoning models)
  *   npm run generate -- --list                    # show roster + games, no calls
  *
  * Requires OPENROUTER_API_KEY in the environment for real calls. This module
@@ -29,6 +31,8 @@ export interface CliArgs {
   game?: string;
   model?: string;
   samples: number;
+  /** Optional completion-token budget override (pipeline default: 8000). */
+  maxTokens?: number;
   all: boolean;
   list: boolean;
 }
@@ -47,6 +51,11 @@ export function parseArgs(argv: string[]): CliArgs {
       case "--samples": {
         const n = Number(argv[++i]);
         if (Number.isFinite(n) && n > 0) args.samples = Math.floor(n);
+        break;
+      }
+      case "--max-tokens": {
+        const n = Number(argv[++i]);
+        if (Number.isFinite(n) && n > 0) args.maxTokens = Math.floor(n);
         break;
       }
       case "--all":
@@ -151,6 +160,7 @@ export async function main(argv: string[]): Promise<void> {
         game,
         model,
         samples: args.samples,
+        maxTokens: args.maxTokens,
         onLog: (msg) => console.log(msg),
       });
       all.push(...records);

@@ -26,6 +26,17 @@ describe("parseArgs", () => {
     const args = parseArgs(["--samples", "0"]);
     expect(args.samples).toBe(3);
   });
+
+  it("parses --max-tokens", () => {
+    const args = parseArgs(["--max-tokens", "24000"]);
+    expect(args.maxTokens).toBe(24000);
+  });
+
+  it("leaves maxTokens undefined by default and ignores invalid values", () => {
+    expect(parseArgs([]).maxTokens).toBeUndefined();
+    expect(parseArgs(["--max-tokens", "0"]).maxTokens).toBeUndefined();
+    expect(parseArgs(["--max-tokens", "nope"]).maxTokens).toBeUndefined();
+  });
 });
 
 describe("loadConfig (canonical manifest)", () => {
@@ -42,7 +53,7 @@ describe("loadConfig (canonical manifest)", () => {
     expect(pong).toMatchObject({ name: "Pong", year: 1972, creator: "Atari" });
   });
 
-  it("loads the 6 canonical models with exact slugs and openrouter ids", async () => {
+  it("loads the 9 canonical models with exact slugs and openrouter ids", async () => {
     const { models } = await loadConfig();
     expect(models.map((m) => m.slug)).toEqual([
       "gemini-flash-lite",
@@ -51,6 +62,9 @@ describe("loadConfig (canonical manifest)", () => {
       "qwen3-8b",
       "gemma-3-4b",
       "ministral-8b",
+      "claude-opus-4-8",
+      "gpt-5-5",
+      "gemini-3-1-pro",
     ]);
     const byId = Object.fromEntries(models.map((m) => [m.slug, m.openrouterId]));
     expect(byId["gemini-flash-lite"]).toBe("google/gemini-2.5-flash-lite");
@@ -59,5 +73,8 @@ describe("loadConfig (canonical manifest)", () => {
     expect(byId["qwen3-8b"]).toBe("qwen/qwen3-8b");
     expect(byId["gemma-3-4b"]).toBe("google/gemma-3-4b-it");
     expect(byId["ministral-8b"]).toBe("mistralai/ministral-8b-2512");
+    expect(byId["claude-opus-4-8"]).toBe("anthropic/claude-opus-4.8");
+    expect(byId["gpt-5-5"]).toBe("openai/gpt-5.5");
+    expect(byId["gemini-3-1-pro"]).toBe("google/gemini-3.1-pro-preview");
   });
 });

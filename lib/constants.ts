@@ -15,6 +15,7 @@ export type VoteWinner = (typeof VOTE_WINNERS)[number];
 
 /** Vendor brand-dot colors (design.md §2). */
 export const VENDOR_COLORS: Record<string, string> = {
+  Anthropic: "#D97757",
   Google: "#4285F4",
   Microsoft: "#00A4EF",
   Alibaba: "#FF6A00",
