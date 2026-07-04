@@ -11,17 +11,22 @@
 //      are left untouched (skipped), matching the manifest's first-record-wins
 //      convention from the seed.
 //
-// What it NEVER does: delete or update ANY existing row. No votes, playability
-// votes, users, ratings, or generations are modified — this is safe to run
-// against a live database with real votes (it is the script used to promote new
-// builds to production). Environment-agnostic: PrismaClient reads DATABASE_URL /
-// DIRECT_URL from the environment (or .env) exactly like the app.
+// What it NEVER does: delete or update ANY existing source-of-truth row. No
+// votes, playability votes, users, or existing generations are modified — this
+// is safe to run against a live database with real votes (it is the script used
+// to promote new builds to production). The one derived table it DOES rebuild is
+// Rating (step 4): the leaderboard only lists models that have Rating rows, so
+// after adding models we recompute ratings from the (untouched) votes — new
+// models land at the default rating with 0 votes. Environment-agnostic:
+// PrismaClient reads DATABASE_URL / DIRECT_URL from the environment (or .env)
+// exactly like the app.
 
 import { PrismaClient } from "@prisma/client";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { LOCKED_PROMPT } from "../lib/constants";
+import { recomputeAndStore } from "../lib/rating/recompute";
 import { GAMES, MODELS, costPerGen } from "../prisma/roster";
 
 const prisma = new PrismaClient();
@@ -152,7 +157,14 @@ async function main() {
 
   const totalGens = await prisma.generation.count();
   console.log(`  total generations in DB: ${totalGens}`);
-  console.log("sync-roster: done. Nothing was deleted or updated besides model/game upserts.");
+
+  // 4) Rebuild the derived Rating table so newly-added models appear on the
+  //    leaderboard (they get the default rating; votes are read, never written).
+  const recompute = await recomputeAndStore();
+  console.log(
+    `  ratings recomputed: overall=${recompute.overallRows} perGame=${recompute.perGameRows}`,
+  );
+  console.log("sync-roster: done. Votes and existing generations untouched.");
 }
 
 main()
