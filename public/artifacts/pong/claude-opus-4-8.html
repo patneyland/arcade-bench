@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pong</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: #fff;
+        overflow: hidden;
+    }
+    h1 {
+        margin-bottom: 10px;
+        letter-spacing: 8px;
+        text-shadow: 0 0 10px #0f0;
+    }
+    canvas {
+        background: #000;
+        border: 2px solid #fff;
+        box-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+    #info {
+        margin-top: 15px;
+        font-size: 14px;
+        color: #888;
+        text-align: center;
+    }
+    #startMsg {
+        margin-top: 10px;
+        color: #0f0;
+        font-size: 16px;
+        animation: blink 1s infinite;
+    }
+    @keyframes blink {
+        50% { opacity: 0.3; }
+    }
+</style>
+</head>
+<body>
+    <h1>PONG</h1>
+    <canvas id="game" width="800" height="500"></canvas>
+    <div id="info">Player: W / S keys &nbsp;|&nbsp; CPU on right &nbsp;|&nbsp; First to 10 wins</div>
+    <div id="startMsg">Press SPACE to start / pause</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width;
+const H = canvas.height;
+
+const paddleWidth = 12;
+const paddleHeight = 90;
+const ballSize = 12;
+const winScore = 10;
+
+let running = false;
+let gameOver = false;
+
+const player = {
+    x: 20,
+    y: H / 2 - paddleHeight / 2,
+    score: 0,
+    speed: 7,
+    up: false,
+    down: false
+};
+
+const cpu = {
+    x: W - 20 - paddleWidth,
+    y: H / 2 - paddleHeight / 2,
+    score: 0,
+    speed: 5
+};
+
+const ball = {
+    x: W / 2,
+    y: H / 2,
+    vx: 0,
+    vy: 0,
+    speed: 6
+};
+
+function resetBall(direction) {
+    ball.x = W / 2;
+    ball.y = H / 2;
+    ball.speed = 6;
+    const angle = (Math.random() * 0.5 - 0.25) * Math.PI; // -45 to 45 deg
+    ball.vx = direction * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+}
+
+function resetGame() {
+    player.score = 0;
+    cpu.score = 0;
+    player.y = H / 2 - paddleHeight / 2;
+    cpu.y = H / 2 - paddleHeight / 2;
+    gameOver = false;
+    resetBall(Math.random() < 0.5 ? 1 : -1);
+}
+
+// Input
+document.addEventListener('keydown', e => {
+    if (e.key === 'w' || e.key === 'W') player.up = true;
+    if (e.key === 's' || e.key === 'S') player.down = true;
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (gameOver) {
+            resetGame();
+            running = true;
+        } else {
+            running = !running;
+        }
+    }
+});
+document.addEventListener('keyup', e => {
+    if (e.key === 'w' || e.key === 'W') player.up = false;
+    if (e.key === 's' || e.key === 'S') player.down = false;
+});
+
+function update() {
+    if (!running || gameOver) return;
+
+    // Player movement
+    if (player.up) player.y -= player.speed;
+    if (player.down) player.y += player.speed;
+    player.y = Math.max(0, Math.min(H - paddleHeight, player.y));
+
+    // CPU AI - follows ball with some easing
+    const cpuCenter = cpu.y + paddleHeight / 2;
+    if (ball.y < cpuCenter - 12) cpu.y -= cpu.speed;
+    else if (ball.y > cpuCenter + 12) cpu.y += cpu.speed;
+    cpu.y = Math.max(0, Math.min(H - paddleHeight, cpu.y));
+
+    // Ball movement
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // Top/bottom wall bounce
+    if (ball.y <= 0) {
+        ball.y = 0;
+        ball.vy *= -1;
+    }
+    if (ball.y + ballSize >= H) {
+        ball.y = H - ballSize;
+        ball.vy *= -1;
+    }
+
+    // Player paddle collision
+    if (ball.x <= player.x + paddleWidth &&
+        ball.x + ballSize >= player.x &&
+        ball.y + ballSize >= player.y &&
+        ball.y <= player.y + paddleHeight &&
+        ball.vx < 0) {
+        ball.x = player.x + paddleWidth;
+        bounce(player);
+    }
+
+    // CPU paddle collision
+    if (ball.x + ballSize >= cpu.x &&
+        ball.x <= cpu.x + paddleWidth &&
+        ball.y + ballSize >= cpu.y &&
+        ball.y <= cpu.y + paddleHeight &&
+        ball.vx > 0) {
+        ball.x = cpu.x - ballSize;
+        bounce(cpu);
+    }
+
+    // Scoring
+    if (ball.x + ballSize < 0) {
+        cpu.score++;
+        checkWin();
+        resetBall(1);
+    }
+    if (ball.x > W) {
+        player.score++;
+        checkWin();
+        resetBall(-1);
+    }
+}
+
+function bounce(paddle) {
+    const paddleCenter = paddle.y + paddleHeight / 2;
+    const ballCenter = ball.y + ballSize / 2;
+    const relative = (ballCenter - paddleCenter) / (paddleHeight / 2); // -1 to 1
+    const bounceAngle = relative * (Math.PI / 4); // max 45 deg
+
+    ball.speed = Math.min(ball.speed + 0.4, 14);
+    const dir = ball.vx > 0 ? -1 : 1;
+    ball.vx = dir * ball.speed * Math.cos(bounceAngle);
+    ball.vy = ball.speed * Math.sin(bounceAngle);
+}
+
+function checkWin() {
+    if (player.score >= winScore || cpu.score >= winScore) {
+        gameOver = true;
+        running = false;
+    }
+}
+
+function draw() {
+    // Clear
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    // Center dashed line
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([12, 16]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Scores
+    ctx.fillStyle = '#fff';
+    ctx.font = '48px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(player.score, W / 2 - 60, 60);
+    ctx.fillText(cpu.score, W / 2 + 60, 60);
+
+    // Paddles
+    ctx.fillStyle = '#0f0';
+    ctx.fillRect(player.x, player.y, paddleWidth, paddleHeight);
+    ctx.fillStyle = '#0ff';
+    ctx.fillRect(cpu.x, cpu.y, paddleWidth, paddleHeight);
+
+    // Ball
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(ball.x, ball.y, ballSize, ballSize);
+
+    // Messages
+    ctx.textAlign = 'center';
+    if (gameOver) {
+        ctx.fillStyle = '#ff0';
+        ctx.font = '40px "Courier New", monospace';
+        const winner = player.score >= winScore ? 'YOU WIN!' : 'CPU WINS!';
+        ctx.fillText(winner, W / 2, H / 2 - 20);
+        ctx.font = '20px "Courier New", monospace';
+        ctx.fillStyle = '#0f0';
+        ctx.fillText('Press SPACE to play again', W / 2, H / 2 + 30);
+    } else if (!running) {
+        ctx.fillStyle = 'rgba(0,255,0,0.8)';
+        ctx.font = '24px "Courier New", monospace';
+        ctx.fillText('PAUSED - Press SPACE', W / 2, H / 2);
+    }
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+resetBall(Math.random() < 0.5 ? 1 : -1);
+loop();
+</script>
+</body>
+</html>

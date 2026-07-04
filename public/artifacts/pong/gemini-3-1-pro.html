@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classic Pong</title>
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        canvas {
+            background-color: #000;
+            border: 2px solid #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+        .instructions {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="pongCanvas" width="800" height="500"></canvas>
+    
+    <div class="instructions">
+        <h2>PONG</h2>
+        <p>Controls: Use <b>UP</b> and <b>DOWN</b> arrow keys to move your paddle (Left).</p>
+        <p>First to 10 wins!</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("pongCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Game Constants
+        const PADDLE_WIDTH = 10;
+        const PADDLE_HEIGHT = 100;
+        const BALL_SIZE = 10;
+        const WINNING_SCORE = 10;
+
+        // Player (Left Paddle)
+        const player = {
+            x: 20,
+            y: canvas.height / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            color: "#FFF",
+            score: 0,
+            speed: 8,
+            dy: 0
+        };
+
+        // AI (Right Paddle)
+        const computer = {
+            x: canvas.width - 30,
+            y: canvas.height / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            color: "#FFF",
+            score: 0,
+            speed: 4.5 // Adjust to change AI difficulty
+        };
+
+        // Ball
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            size: BALL_SIZE,
+            speed: 5,
+            dx: 5,
+            dy: 5,
+            color: "#FFF"
+        };
+
+        // Keyboard Inputs
+        let upPressed = false;
+        let downPressed = false;
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") upPressed = true;
+            if (e.key === "ArrowDown") downPressed = true;
+        });
+
+        document.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowUp") upPressed = false;
+            if (e.key === "ArrowDown") downPressed = false;
+        });
+
+        // Draw a Rectangle
+        function drawRect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        // Draw the Net
+        function drawNet() {
+            for (let i = 0; i <= canvas.height; i += 40) {
+                drawRect(canvas.width / 2 - 1, i, 2, 20, "#FFF");
+            }
+        }
+
+        // Draw Text (Scores)
+        function drawText(text, x, y) {
+            ctx.fillStyle = "#FFF";
+            ctx.font = "45px Courier New";
+            ctx.fillText(text, x, y);
+        }
+
+        // Reset the ball slightly towards the player who just got scored on
+        function resetBall() {
+            ball.x = canvas.width / 2 - ball.size / 2;
+            ball.y = canvas.height / 2 - ball.size / 2;
+            ball.speed = 5;
+            ball.dx = -Math.sign(ball.dx) * ball.speed; 
+            ball.dy = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * 3 + 2);
+        }
+
+        // Collision Detection
+        function collision(b, p) {
+            return (
+                b.x < p.x + p.width &&
+                b.x + b.size > p.x &&
+                b.y < p.y + p.height &&
+                b.y + b.size > p.y
+            );
+        }
+
+        // Update Game Logic
+        function update() {
+            // Move Player Paddle
+            if (upPressed && player.y > 0) {
+                player.y -= player.speed;
+            } else if (downPressed && player.y + player.height < canvas.height) {
+                player.y += player.speed;
+            }
+
+            // Move Computer Paddle (Simple AI)
+            let computerCenter = computer.y + computer.height / 2;
+            let ballCenter = ball.y + ball.size / 2;
+            if (computerCenter < ballCenter - 15) {
+                computer.y += computer.speed;
+            } else if (computerCenter > ballCenter + 15) {
+                computer.y -= computer.speed;
+            }
+
+            // Clamp AI to screen boundaries
+            if (computer.y < 0) computer.y = 0;
+            if (computer.y + computer.height > canvas.height) computer.y = canvas.height - computer.height;
+
+            // Move the Ball
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Ball Collision with Top or Bottom Wall
+            if (ball.y <= 0 || ball.y + ball.size >= canvas.height) {
+                ball.dy *= -1; // reverse vertical direction
+            }
+
+            // Determine which paddle the ball is hitting
+            let activePaddle = (ball.x + ball.size / 2 < canvas.width / 2) ? player : computer;
+
+            // Ball Collision with Paddle
+            if (collision(ball, activePaddle)) {
+                // Calculate where the ball hit the paddle (normalized from -1 to 1)
+                let hitPoint = (ball.y + ball.size / 2) - (activePaddle.y + activePaddle.height / 2);
+                hitPoint = hitPoint / (activePaddle.height / 2);
+
+                // Calculate angle based on hit point (max 45 degrees)
+                let angle = hitPoint * (Math.PI / 4);
+
+                // Determine direction based on which paddle was hit
+                let direction = (ball.x + ball.size / 2 < canvas.width / 2) ? 1 : -1;
+
+                // Increase ball speed
+                ball.speed += 0.5;
+
+                // Change velocity components
+                ball.dx = direction * ball.speed * Math.cos(angle);
+                ball.dy = ball.speed * Math.sin(angle);
+                
+                // Prevent ball from getting stuck inside paddle
+                if (activePaddle === player) {
+                    ball.x = player.x + player.width;
+                } else {
+                    ball.x = computer.x - ball.size;
+                }
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                computer.score++;
+                checkWin();
+                resetBall();
+            } else if (ball.x + ball.size > canvas.width) {
+                player.score++;
+                checkWin();
+                resetBall();
+            }
+        }
+
+        // Check if someone reached the winning score
+        function checkWin() {
+            if (player.score >= WINNING_SCORE || computer.score >= WINNING_SCORE) {
+                let winner = player.score >= WINNING_SCORE ? "Player" : "Computer";
+                alert(winner + " wins the game! Press OK to play again.");
+                player.score = 0;
+                computer.score = 0;
+                resetBall();
+            }
+        }
+
+        // Render Game State to Canvas
+        function draw() {
+            // Clear the canvas
+            drawRect(0, 0, canvas.width, canvas.height, "#000");
+
+            // Draw Net
+            drawNet();
+
+            // Draw Scores
+            drawText(player.score, canvas.width / 4, 50);
+            drawText(computer.score, 3 * canvas.width / 4, 50);
+
+            // Draw Paddles
+            drawRect(player.x, player.y, player.width, player.height, player.color);
+            drawRect(computer.x, computer.y, computer.width, computer.height, computer.color);
+
+            // Draw Ball
+            drawRect(ball.x, ball.y, ball.size, ball.size, ball.color);
+        }
+
+        // Game Loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>

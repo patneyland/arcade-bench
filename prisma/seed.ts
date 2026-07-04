@@ -21,6 +21,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CERTIFIED_PLAYABLE_PCT, LOCKED_PROMPT } from "../lib/constants";
 import { recomputeAndStore } from "../lib/rating/recompute";
+import { GAMES, IN_TOKENS, MODELS, OUT_TOKENS, costPerGen } from "./roster";
 
 const prisma = new PrismaClient();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -38,51 +39,8 @@ function mulberry32(seed: number) {
 }
 const rand = mulberry32(20260630);
 
-const IN_TOKENS = 800;
-const OUT_TOKENS = 4000;
-function costPerGen(inPer1M: number, outPer1M: number): number {
-  return (IN_TOKENS * inPer1M + OUT_TOKENS * outPer1M) / 1_000_000;
-}
-
-// --- model roster -----------------------------------------------------------
-type CostTier = "featherweight" | "midweight" | "heavyweight";
-interface ModelSeed {
-  slug: string;
-  name: string;
-  vendor: string;
-  paramSize: string | null;
-  openrouterId: string;
-  inPer1M: number;
-  outPer1M: number;
-  tier: CostTier;
-}
-
-const MODELS: ModelSeed[] = [
-  { slug: "gemini-flash-lite", name: "Gemini 2.5 Flash-Lite", vendor: "Google", paramSize: null, openrouterId: "google/gemini-2.5-flash-lite", inPer1M: 0.1, outPer1M: 0.4, tier: "midweight" },
-  { slug: "gpt-4-1-nano", name: "GPT-4.1 nano", vendor: "OpenAI", paramSize: null, openrouterId: "openai/gpt-4.1-nano", inPer1M: 0.1, outPer1M: 0.4, tier: "midweight" },
-  { slug: "deepseek-v3", name: "DeepSeek V3", vendor: "DeepSeek", paramSize: "671B", openrouterId: "deepseek/deepseek-chat", inPer1M: 0.2, outPer1M: 0.8, tier: "heavyweight" },
-  { slug: "qwen3-8b", name: "Qwen3 8B", vendor: "Alibaba", paramSize: "8B", openrouterId: "qwen/qwen3-8b", inPer1M: 0.05, outPer1M: 0.4, tier: "featherweight" },
-  { slug: "gemma-3-4b", name: "Gemma 3 4B", vendor: "Google", paramSize: "4B", openrouterId: "google/gemma-3-4b-it", inPer1M: 0.05, outPer1M: 0.1, tier: "featherweight" },
-  { slug: "ministral-8b", name: "Ministral 8B", vendor: "Mistral", paramSize: "8B", openrouterId: "mistralai/ministral-8b-2512", inPer1M: 0.15, outPer1M: 0.15, tier: "featherweight" },
-];
-
-// --- game roster ------------------------------------------------------------
-interface GameSeed {
-  slug: string;
-  title: string;
-  year: number;
-  creator: string;
-  roundOrder: number;
-  status: "live" | "now" | "upcoming";
-}
-
-const GAMES: GameSeed[] = [
-  { slug: "pong", title: "Pong", year: 1972, creator: "Atari", roundOrder: 1, status: "live" },
-  { slug: "snake", title: "Snake", year: 1976, creator: "Gremlin", roundOrder: 2, status: "live" },
-  { slug: "breakout", title: "Breakout", year: 1976, creator: "Atari", roundOrder: 3, status: "now" },
-  { slug: "space-invaders", title: "Space Invaders", year: 1978, creator: "Taito", roundOrder: 4, status: "upcoming" },
-  { slug: "asteroids", title: "Asteroids", year: 1979, creator: "Atari", roundOrder: 5, status: "upcoming" },
-];
+// Model + game roster: shared with scripts/sync-roster.ts via ./roster (single
+// source of truth; costPerGen/IN_TOKENS/OUT_TOKENS live there too).
 
 // --- FALLBACK generations (used only when no harness manifest is present) ----
 const FALLBACK_GENERATIONS: Record<string, string[]> = {
