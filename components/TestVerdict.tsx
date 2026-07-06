@@ -24,6 +24,8 @@ type Reveal = NonNullable<RecordPlayabilityResult["reveal"]>;
 
 interface TestVerdictProps {
   candidate: TestCandidate;
+  /** Active game filter (undefined = All) — carried into the "next build" fetch. */
+  gameSlug?: string;
   /** Called with the next candidate (or null = queue empty) when one loads. */
   onNext?: (next: TestCandidate | null) => void;
   /** "↩ go back and play more" — returns the flow to the play step. */
@@ -39,6 +41,7 @@ const DUPLICATE_ADVANCE_MS = 1400;
 
 export function TestVerdict({
   candidate,
+  gameSlug,
   onNext,
   onBack,
   onRevealed,
@@ -103,7 +106,8 @@ export function TestVerdict({
 
   async function loadNext() {
     try {
-      const res = await fetch("/api/playability/next");
+      const q = gameSlug ? `?game=${encodeURIComponent(gameSlug)}` : "";
+      const res = await fetch(`/api/playability/next${q}`);
       if (res.ok) {
         const next: TestCandidate | null = await res.json();
         if (onNext) onNext(next);
