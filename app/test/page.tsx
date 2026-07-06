@@ -6,7 +6,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { getNextTestCandidate } from "@/lib/data";
+import { getNextTestCandidate, getTestableGames } from "@/lib/data";
 import { TestCabinet } from "@/components/TestCabinet";
 import { Container } from "@/components/Layout";
 
@@ -19,7 +19,11 @@ export const metadata = {
 // The queue is per-user and moves with every vote — never prerender this.
 export const dynamic = "force-dynamic";
 
-export default async function TestPage() {
+export default async function TestPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ game?: string }>;
+}) {
   const { userId } = await auth();
 
   if (!userId) {
@@ -55,13 +59,22 @@ export default async function TestPage() {
     );
   }
 
-  const candidate = await getNextTestCandidate();
+  // Game picker (docs/ux-overhaul.md §7): default "All" serves the least-tested queue
+  // across every game; a valid ?game=<slug> narrows it to one game.
+  const games = await getTestableGames();
+  const params = await searchParams;
+  const activeGame =
+    params.game && games.some((g) => g.slug === params.game)
+      ? params.game
+      : undefined;
+
+  const candidate = await getNextTestCandidate(activeGame);
 
   return (
     <main>
       {/* Wider than the 1120px text container so the stage can grow on big screens. */}
       <div className="mx-auto w-full max-w-[1400px] px-6 py-8 sm:py-10">
-        <TestCabinet initial={candidate} />
+        <TestCabinet initial={candidate} games={games} initialGame={activeGame} />
       </div>
     </main>
   );

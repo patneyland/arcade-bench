@@ -306,6 +306,20 @@ export async function getGames(): Promise<GameView[]> {
   return games.map(toGameView);
 }
 
+/**
+ * Games that actually have something to screen: at least one published generation.
+ * Used to build the Test Lab's game picker — "upcoming" games with no builds yet
+ * would only serve an empty queue, so they're excluded.
+ */
+export async function getTestableGames(): Promise<GameView[]> {
+  const games = await prisma.game.findMany({
+    where: { generations: { some: { published: true } } },
+    orderBy: { roundOrder: "asc" },
+    select: GAME_SELECT,
+  });
+  return games.map(toGameView);
+}
+
 // ---------------------------------------------------------------------------
 // Vote recording (full server-side enforcement)
 // ---------------------------------------------------------------------------
@@ -445,15 +459,32 @@ export async function getArcade(): Promise<ArcadeEntry[]> {
  * (tie-break: oldest createdAt). Model identity OMITTED — hidden until the verdict.
  * Null when the queue is empty or the caller is unauthenticated (the route layer
  * distinguishes those two by checking the session itself).
+ *
+ * When `gameSlug` is given, the queue is narrowed to that game (the Test Lab's game
+ * picker); an unknown slug yields an empty queue (null). Omit it for the default
+ * least-tested queue across every game.
  */
-export async function getNextTestCandidate(): Promise<TestCandidate | null> {
+export async function getNextTestCandidate(
+  gameSlug?: string,
+): Promise<TestCandidate | null> {
   const user = await getSessionUser();
   if (!user) return null;
+
+  let gameId: string | undefined;
+  if (gameSlug) {
+    const g = await prisma.game.findUnique({
+      where: { slug: gameSlug },
+      select: { id: true },
+    });
+    if (!g) return null; // unknown game → nothing to screen
+    gameId = g.id;
+  }
 
   const gen = await prisma.generation.findFirst({
     where: {
       published: true,
       playabilityVotes: { none: { userId: user.id } },
+      ...(gameId ? { gameId } : {}),
     },
     orderBy: [{ playabilityVotes: { _count: "asc" } }, { createdAt: "asc" }],
     select: {

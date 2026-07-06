@@ -33,6 +33,11 @@
   (/arcade, certified builds only), Test Lab (/test, signed-in screening),
   PlayabilityVote + API routes + seed, leaderboard Playable column; /arena parked
   out of the nav. 105 tests + build green; visually verified on the local stack.
+- [x] **7a. Test Lab game picker** — shipped 2026-07-06: "All games" (default,
+  least-tested queue) plus a chip per screenable game above the cabinet; choice
+  mirrored to `?game=<slug>`. `getNextTestCandidate(gameSlug?)` + `getTestableGames()`
+  in lib/data, `/api/playability/next?game=` param. 111 tests green (typecheck only;
+  no live pass yet).
 
 > Post-ship note: all of the above verified by tests + `next build` only — Docker
 > was down, so no live visual pass yet. First session with the local stack up:
