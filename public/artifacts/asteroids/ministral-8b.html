@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asteroids Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+        }
+
+        #game-canvas {
+            background-color: #000;
+            display: block;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #restart-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score-display">Score: 0</div>
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+        <div id="game-over">
+            <h2>Game Over</h2>
+            <p id="final-score">Final Score: 0</p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game canvas setup
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score-display');
+        const gameOverDisplay = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // Game state
+        let score = 0;
+        let gameRunning = true;
+        let gameSpeed = 1;
+
+        // Player ship
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 15,
+            speed: 5,
+            angle: 0,
+            rotationSpeed: 0.05,
+            color: '#00FFFF'
+        };
+
+        // Bullets
+        const bullets = [];
+        const bulletSpeed = 10;
+        const bulletRadius = 5;
+
+        // Asteroids
+        const asteroids = [];
+        const asteroidCount = 5;
+        const asteroidSizes = [30, 25, 20, 15, 10];
+        const asteroidColors = ['#8B4513', '#A0522D', '#CD853F', '#D2B48C', '#F5DEB3'];
+
+        // Initialize game
+        function initGame() {
+            score = 0;
+            gameSpeed = 1;
+            gameRunning = true;
+
+            // Clear game elements
+            bullets.length = 0;
+            asteroids.length = 0;
+
+            // Create player at center
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            player.angle = 0;
+
+            // Create asteroids
+            for (let i = 0; i < asteroidCount; i++) {
+                createAsteroid();
+            }
+
+            // Hide game over screen
+            gameOverDisplay.style.display = 'none';
+        }
+
+        // Create a new asteroid
+        function createAsteroid() {
+            const size = asteroidSizes[Math.floor(Math.random() * asteroidSizes.length)];
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height) / 2;
+
+            const x = canvas.width / 2 + Math.cos(angle) * distance;
+            const y = canvas.height / 2 + Math.sin(angle) * distance;
+
+            asteroids.push({
+                x: x,
+                y: y,
+                radius: size,
+                angle: Math.random() * Math.PI * 2,
+                speed: 1 + Math.random() * 2,
+                color: asteroidColors[Math.floor(Math.random() * asteroidColors.length)],
+                points: Math.floor(size * 2)
+            });
+        }
+
+        // Draw player ship
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+
+            // Draw ship body
+            ctx.beginPath();
+            ctx.moveTo(0, -player.radius);
+            ctx.lineTo(-player.radius * 0.7, player.radius * 0.3);
+            ctx.lineTo(player.radius * 0.7, player.radius * 0.3);
+            ctx.closePath();
+            ctx.fillStyle = player.color;
+            ctx.fill();
+
+            // Draw ship tail
+            ctx.beginPath();
+            ctx.moveTo(0, -player.radius);
+            ctx.lineTo(0, -player.radius * 1.5);
+            ctx.lineTo(-5, -player.radius * 1.2);
+            ctx.lineTo(5, -player.radius * 1.2);
+            ctx.closePath();
+            ctx.fillStyle = '#FF00FF';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Draw bullets
+        function drawBullets() {
+            ctx.fillStyle = '#FF0';
+            bullets.forEach(bullet => {
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bulletRadius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Draw asteroids
+        function drawAsteroids() {
+            asteroids.forEach(asteroid => {
+                ctx.beginPath();
+                ctx.arc(asteroid.x, asteroid.y, asteroid.radius, 0, Math.PI * 2);
+                ctx.fillStyle = asteroid.color;
+                ctx.fill();
+
+                // Draw asteroid details
+                ctx.beginPath();
+                const detailSize = asteroid.radius * 0.3;
+                const detailCount = Math.floor(asteroid.radius / 5);
+
+                for (let i = 0; i < detailCount; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * detailSize;
+                    ctx.moveTo(asteroid.x + Math.cos(angle) * asteroid.radius, asteroid.y + Math.sin(angle) * asteroid.radius);
+                    ctx.lineTo(asteroid.x + Math.cos(angle) * (asteroid.radius - distance), asteroid.y + Math.sin(angle) * (asteroid.radius - distance));
+                }
+
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        // Update game state
+        function update() {
+            if (!gameRunning) return;
+
+            // Move player
+            const moveSpeed = player.speed * gameSpeed;
+            const moveX = Math.cos(player.angle) * moveSpeed;
+            const moveY = Math.sin(player.angle) * moveSpeed;
+
+            // Wrap around screen edges
+            if (player.x + moveX < 0) {
+                player.x = canvas.width;
+            } else if (player.x + moveX > canvas.width) {
+                player.x = -player.radius;
+            } else {
+                player.x += moveX;
+            }
+
+            if (player.y + moveY < 0) {
+                player.y = canvas.height;
+            } else if (player.y + moveY > canvas.height) {
+                player.y = -player.radius;
+            } else {
+                player.y += moveY;
+            }
+
+            // Update bullets
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.x += Math.cos(player.angle) * bulletSpeed * gameSpeed;
+                bullet.y += Math.sin(player.angle) * bulletSpeed * gameSpeed;
+
+                // Remove bullets that go off screen
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // Update asteroids
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const asteroid = asteroids[i];
+
+                // Move asteroid
+                asteroid.x += Math.cos(asteroid.angle) * asteroid.speed * gameSpeed;
+                asteroid.y += Math.sin(asteroid.angle) * asteroid.speed * gameSpeed;
+
+                // Wrap around screen edges
+                if (asteroid.x + asteroid.radius > canvas.width) {
+                    asteroid.x = -asteroid.radius;
+                } else if (asteroid.x - asteroid.radius < 0) {
+                    asteroid.x = canvas.width;
+                }
+
+                if (asteroid.y + asteroid.radius > canvas.height) {
+                    asteroid.y = -asteroid.radius;
+                } else if (asteroid.y - asteroid.radius < 0) {
+                    asteroid.y = canvas.height;
+                }
+
+                // Check for collisions with player
+                const distance = Math.sqrt(
+                    Math.pow(player.x - asteroid.x, 2) +
+                    Math.pow(player.y - asteroid.y, 2)
+                );
+
+                if (distance < player.radius + asteroid.radius) {
+                    gameOver();
+                }
+
+                // Check for collisions with bullets
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    const bullet = bullets[j];
+                    const bulletDistance = Math.sqrt(
+                        Math.pow(bullet.x - asteroid.x, 2) +
+                        Math.pow(bullet.y - asteroid.y, 2)
+                    );
+
+                    if (bulletDistance < bulletRadius + asteroid.radius) {
+                        // Remove bullet
+                        bullets.splice(j, 1);
+
+                        // Remove asteroid
+                        asteroids.splice(i, 1);
+
+                        // Add points
+                        score += asteroid.points;
+                        scoreDisplay.textContent = `Score: ${score}`;
+
+                        // Create new asteroid if we have points left
+                        if (asteroids.length < asteroidCount * 1.5) {
+                            createAsteroid();
+                        }
+
+                        // Increase game speed slightly
+                        gameSpeed += 0.01;
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Draw everything
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw game elements
+            drawAsteroids();
+            drawBullets();
+            drawPlayer();
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameRunning) {
+                update();
+                draw();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Handle keyboard input
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    // Move forward
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    player.angle -= player.rotationSpeed;
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    player.angle += player.rotationSpeed;
+                    break;
+                case ' ':
+                    // Fire bullet
+                    bullets.push({
+                        x: player.x + Math.cos(player.angle) * player.radius,
+                        y: player.y + Math.sin(player.angle) * player.radius
+                    });
+                    break;
+            }
+        });
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            finalScoreDisplay.textContent = `Final Score: ${score}`;
+            gameOverDisplay.style.display = 'block';
+        }
+
+        // Restart game
+        restartBtn.addEventListener('click', initGame);
+
+        // Start game
+        initGame();
+        gameLoop();
+    </script>
+</body>
+</html>

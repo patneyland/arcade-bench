@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Space Invaders</title>
+<style>
+body {
+    background-color: black;
+    overflow: hidden; /* Prevents scrollbars */
+}
+
+canvas {
+    background-color: black;
+}
+#score {
+    color: white;
+    font-size: 20px;
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="640" height="480"></canvas>
+<div id="score">Score: 0</div>
+
+<script>
+// Game Constants
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreDisplay = document.getElementById('score');
+
+const playerSpeed = 5;
+const alienSpeed = 2;
+const alienSpawnRate = 30; // milliseconds between alien spawns
+const alienColumns = 5; // Number of invaders columns
+
+// Player
+let player = {
+    x: canvas.width / 2,
+    y: canvas.height - 50,
+    width: 30,
+    height: 20,
+    color: 'white'
+};
+
+// Aliens
+let aliens = [];
+for (let i = 0; i < alienColumns; i++) {
+    aliens.push({
+        x: (i + 1) * 50, //Spacing between columns
+        y: 20,
+        width: 30,
+        height: 20,
+        color: 'white',
+        invincible: false // Add invincibility
+    });
+}
+
+// Shooting
+let bullets = [];
+const bulletSpeed = 10;
+const bulletWidth = 3;
+const bulletHeight = 10;
+
+
+// Game State
+let score = 0;
+let gameOver = false;
+
+// Game Loop
+function gameLoop() {
+    if (gameOver) return;
+
+    // Update Game State
+    update();
+    // Render Game State
+    render();
+
+    // Schedule Next Frame
+    requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    // Player Movement
+    if (keys['ArrowLeft']) {
+        player.x -= playerSpeed;
+        if (player.x < 0) player.x = 0;
+    }
+    if (keys['ArrowRight']) {
+        player.x += playerSpeed;
+        if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+    }
+
+    // Alien Movement
+    for (let i = 0; i < aliens.length; i++) {
+        aliens[i].x += alienSpeed;
+        if (aliens[i].x > canvas.width - aliens[i].width) {
+            aliens[i].x = -aliens[i].width; // Reset to left edge
+        }
+    }
+
+    // Shooting
+    if (keys['Space']) {
+        bullets.push({
+            x: player.x + player.width/2 - bulletWidth/2,
+            y: player.y,
+            speed: bulletSpeed,
+            width: bulletWidth,
+            height: bulletHeight
+        });
+    }
+
+    // Bullet Movement
+    for (let i = 0; i < bullets.length; i++) {
+        bullets[i].y -= bulletSpeed;
+        if (bullets[i].y < 0) {
+            bullets.splice(i, 1);
+            i--; // Adjust index after removing
+        }
+
+        // Collision Detection (Bullet vs. Alien)
+        for (let j = 0; j < aliens.length; j++) {
+            if (
+                bullets[i].x < aliens[j].x + aliens[j].width &&
+                bullets[i].x + bullets[i].width > aliens[j].x &&
+                bullets[i].y < aliens[j].y + aliens[j].height &&
+                bullets[i].y + bullets[i].height > aliens[j].y
+            ) {
+                // Collision!
+                score += 10;
+                scoreDisplay.textContent = 'Score: ' + score;
+                aliens[j].invincible = true; // Mark alien as invincible
+                bullets.splice(i, 1);
+                i--;
+                break;
+            }
+        }
+    }
+
+    // Collision Detection (Player vs. Alien)
+    for (let i = 0; i < aliens.length; i++) {
+        if (
+            player.x < aliens[i].x + aliens[i].width &&
+            player.x + player.width > aliens[i].x &&
+            player.y < aliens[i].y + aliens[i].height &&
+            player.y + player.height > aliens[i].y
+        ) {
+            gameOver = true;
+        }
+    }
+}
+
+function render() {
+    // Clear Canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Player
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    // Draw Aliens
+    ctx.fillStyle = aliens.map(alien => alien.color).join(', '); // Draw all aliens in a single call
+    for (let i = 0; i < aliens.length; i++) {
+        ctx.fillRect(aliens[i].x, aliens[i].y, aliens[i].width, aliens[i].height);
+    }
+
+    // Draw Bullets
+    ctx.fillStyle = 'white';
+    for (let i = 0; i < bullets.length; i++) {
+        ctx.fillRect(bullets[i].x, bullets[i].y, bullets[i].width, bullets[i].height);
+    }
+
+    // Draw Score
+    scoreDisplay.textContent = 'Score: ' + score;
+}
+
+// Input Handling - Using a simpler object.
+const keys = {};
+document.addEventListener('keydown', (event) => {
+    keys[event.key] = true;
+});
+document.addEventListener('keyup', (event) => {
+    keys[event.key] = false;
+});
+</script>
+
+</body>
+</html>

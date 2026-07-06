@@ -45,9 +45,9 @@ export interface GameSeed {
 export const GAMES: GameSeed[] = [
   { slug: "pong", title: "Pong", year: 1972, creator: "Atari", roundOrder: 1, status: "live" },
   { slug: "snake", title: "Snake", year: 1976, creator: "Gremlin", roundOrder: 2, status: "live" },
-  { slug: "breakout", title: "Breakout", year: 1976, creator: "Atari", roundOrder: 3, status: "now" },
-  { slug: "space-invaders", title: "Space Invaders", year: 1978, creator: "Taito", roundOrder: 4, status: "upcoming" },
-  { slug: "asteroids", title: "Asteroids", year: 1979, creator: "Atari", roundOrder: 5, status: "upcoming" },
+  { slug: "breakout", title: "Breakout", year: 1976, creator: "Atari", roundOrder: 3, status: "live" },
+  { slug: "space-invaders", title: "Space Invaders", year: 1978, creator: "Taito", roundOrder: 4, status: "now" },
+  { slug: "asteroids", title: "Asteroids", year: 1979, creator: "Atari", roundOrder: 5, status: "now" },
 ];
 
 /** Modeled tokens for a typical generation (used for costPerGen estimates). */
