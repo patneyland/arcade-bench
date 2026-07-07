@@ -80,6 +80,21 @@ describe("SandboxedPlayer", () => {
     expect(iframe.style.height).toBe("700px");
   });
 
+  // FOCUS HANDOFF REGRESSION: after Restart the keyboard must return to the iframe
+  // automatically — the player should never need an extra click on the game.
+  it("hands keyboard focus back to the iframe after Restart without another click", async () => {
+    const { container, getByRole } = renderStarted();
+    const restart = getByRole("button", { name: /restart/i });
+    restart.focus();
+    fireEvent.click(restart);
+    // The refocus effect runs on the next frame and again at +120ms; wait past both.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    });
+    const iframe = container.querySelector("iframe") as HTMLIFrameElement;
+    expect(document.activeElement).toBe(iframe);
+  });
+
   it("keeps Restart and the focus hint as overlay chips inside the canvas (no row below)", () => {
     const { container, getByRole, getByText } = renderStarted();
     const canvas = container.querySelector(".game-canvas")!;

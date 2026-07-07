@@ -119,7 +119,20 @@ export function SandboxedPlayer({
   const boxRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const playerIdRef = useRef<string>(`player-${nextPlayerId++}`);
-  const focusFrame = () => frameRef.current?.focus();
+  const focusFrame = () => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    frame.focus();
+    // After Restart remounts the frame, the element can already be activeElement
+    // while the fresh document inside never received focus — element.focus() is a
+    // no-op then and keys go nowhere. Focusing the contentWindow is permitted even
+    // cross-origin/sandboxed and hands the keyboard to the new document directly.
+    try {
+      frame.contentWindow?.focus();
+    } catch {
+      // detached frame or non-browser env — the element focus above is the fallback
+    }
+  };
   const activate = () => {
     activePlayerId = playerIdRef.current;
     lockPageScroll(playerIdRef.current);
@@ -267,7 +280,13 @@ export function SandboxedPlayer({
           <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-end justify-between gap-2">
             <button
               type="button"
-              onClick={() => setRunId((n) => n + 1)}
+              // Never let Restart take keyboard focus: a focused button eats the
+              // Enter/Space the player presses next (and would re-trigger Restart).
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={(event) => {
+                event.currentTarget.blur();
+                setRunId((n) => n + 1);
+              }}
               className="btn pointer-events-auto rounded-chip bg-surface px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink shadow-hard-sm"
             >
               ↻ Restart
