@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TETRA — Neon Block Puzzle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Space+Grotesk:wght@300;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-2: #14141d;
+    --panel: rgba(22, 22, 32, 0.72);
+    --border: rgba(255, 182, 39, 0.18);
+    --fg: #f5f0e6;
+    --muted: #8a8597;
+    --amber: #ffb627;
+    --magenta: #ff2e63;
+    --cyan: #22d3ee;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  /* atmospheric background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255, 46, 99, 0.15), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 90%, rgba(255, 182, 39, 0.12), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% 50%, rgba(34, 211, 238, 0.06), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 80%);
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 220px auto 220px;
+    gap: 28px;
+    align-items: start;
+    padding: 24px;
+  }
+
+  .brand {
+    position: absolute;
+    top: 18px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Major Mono Display', monospace;
+    font-size: 22px;
+    letter-spacing: 0.4em;
+    color: var(--amber);
+    text-shadow: 0 0 14px rgba(255, 182, 39, 0.5), 0 0 30px rgba(255, 46, 99, 0.3);
+    pointer-events: none;
+    z-index: 5;
+  }
+  .brand span { color: var(--magenta); }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .panel + .panel { margin-top: 16px; }
+  .panel h3 {
+    font-family: 'Major Mono Display', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    font-weight: normal;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .stats { display: grid; gap: 14px; }
+  .stat {
+    display: flex; flex-direction: column;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .stat:last-child { border: none; padding-bottom: 0; }
+  .stat .label {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .stat .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--fg);
+    line-height: 1;
+    transition: color 0.2s, transform 0.2s;
+  }
+  .stat .value.bump { color: var(--amber); transform: scale(1.08); }
+
+  .mini-canvas {
+    width: 100%;
+    aspect-ratio: 1 / 1.2;
+    display: block;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+  }
+
+  .board-wrap {
+    position: relative;
+    padding: 8px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,182,39,0.08), rgba(255,46,99,0.04));
+    box-shadow: 0 0 0 1px rgba(255,182,39,0.2), 0 30px 80px rgba(0,0,0,0.7), 0 0 60px rgba(255,46,99,0.08);
+  }
+  #board {
+    display: block;
+    background: #06060a;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), inset 0 0 40px rgba(0,0,0,0.6);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 8px;
+    border-radius: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 18px;
+    background: rgba(6,6,10,0.85);
+    backdrop-filter: blur(6px);
+    z-index: 3;
+    text-align: center;
+  }
+  .overlay.show { display: flex; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .overlay .big {
+    font-family: 'Major Mono Display', monospace;
+    font-size: 36px;
+    letter-spacing: 0.2em;
+    color: var(--magenta);
+    text-shadow: 0 0 20px rgba(255,46,99,0.6);
+  }
+  .overlay .sub {
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .overlay button {
+    margin-top: 6px;
+    padding: 12px 26px;
+    background: transparent;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .overlay button:hover {
+    background: var(--amber);
+    color: #0a0a0f;
+    box-shadow: 0 0 20px rgba(255,182,39,0.5);
+  }
+
+  .controls {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .controls .row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dashed rgba(255,255,255,0.06);
+  }
+  .controls .row:last-child { border: none; }
+  .controls kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    background: rgba(255,182,39,0.1);
+    border: 1px solid rgba(255,182,39,0.25);
+    border-radius: 4px;
+    color: var(--amber);
+  }
+  .controls .row span:first-child { color: var(--muted); }
+
+  .next-list { display: grid; gap: 10px; }
+
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 10px 22px;
+    border-radius: 30px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    opacity: 0;
+    transition: all 0.3s;
+    backdrop-filter: blur(12px);
+    z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 880px) {
+    .app { grid-template-columns: 1fr; gap: 14px; padding: 70px 12px 20px; }
+    .brand { font-size: 16px; top: 24px; }
+    .panel { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+  <div class="brand">TE<span>·</span>TRA</div>
+
+  <div class="app">
+    <!-- Left column -->
+    <div class="left-col">
+      <div class="panel">
+        <h3>Hold</h3>
+        <canvas id="hold" class="mini-canvas"></canvas>
+      </div>
+      <div class="panel">
+        <h3>Stats</h3>
+        <div class="stats">
+          <div class="stat"><div class="label">Score</div><div class="value" id="score">0</div></div>
+          <div class="stat"><div class="label">Lines</div><div class="value" id="lines">0</div></div>
+          <div class="stat"><div class="label">Level</div><div class="value" id="level">1</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="big" id="overlayTitle">PAUSED</div>
+        <div class="sub" id="overlaySub">Press P to resume</div>
+        <button id="overlayBtn" style="display:none">Restart</button>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div class="right-col">
+      <div class="panel">
+        <h3>Next</h3>
+        <div class="next-list">
+          <canvas class="mini-canvas next" data-i="0"></canvas>
+          <canvas class="mini-canvas next" data-i="1"></canvas>
+          <canvas class="mini-canvas next" data-i="2"></canvas>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Controls</h3>
+        <div class="controls">
+          <div class="row"><span>Move</span><span><kbd>←</kbd> <kbd>→</kbd></span></div>
+          <div class="row"><span>Soft drop</span><kbd>↓</kbd></div>
+          <div class="row"><span>Hard drop</span><kbd>Space</kbd></div>
+          <div class="row"><span>Rotate CW</span><kbd>↑</kbd> / <kbd>X</kbd></div>
+          <div class="row"><span>Rotate CCW</span><kbd>Z</kbd></div>
+          <div class="row"><span>Hold</span><kbd>C</kbd></div>
+          <div class="row"><span>Pause</span><kbd>P</kbd></div>
+          <div class="row"><span>Restart</span><kbd>R</kbd></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const COLS = 10, ROWS = 20;
+const CELL = 32;
+
+// Piece definitions with rotation states baked as matrices
+const PIECES = {
+  I: { color: '#22d3ee', glow: '#0ea5b9', cells: [[0,1],[1,1],[2,1],[3,1]] },
+  O: { color: '#fbbf24', glow: '#d97706', cells: [[1,0],[2,0],[1,1],[2,1]] },
+  T: { color: '#c084fc', glow: '#9333ea', cells: [[1,0],[0,1],[1,1],[2,1]] },
+  S: { color: '#34d399', glow: '#059669', cells: [[1,0],[2,0],[0,1],[1,1]] },
+  Z: { color: '#fb7185', glow: '#e11d48', cells: [[0,0],[1,0],[1,1],[2,1]] },
+  J: { color: '#60a5fa', glow: '#2563eb', cells: [[0,0],[0,1],[1,1],[2,1]] },
+  L: { color: '#fb923c', glow: '#ea580c', cells: [[2,0],[0,1],[1,1],[2,1]] },
+};
+const PIECE_KEYS = Object.keys(PIECES);
+
+// SRS-ish wall kick offsets (simplified)
+const KICKS = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1]];
+
+class Tetris {
+  constructor() {
+    this.canvas = document.getElementById('board');
+    this.canvas.width = COLS * CELL;
+    this.canvas.height = ROWS * CELL;
+    this.ctx = this.canvas.getContext('2d');
+
+    this.holdCanvas = document.getElementById('hold');
+    this.nextCanvases = [...document.querySelectorAll('.next')];
+    [this.holdCanvas, ...this.nextCanvases].forEach(c => {
+      c.width = c.clientWidth * devicePixelRatio;
+      c.height = c.clientHeight * devicePixelRatio;
+    });
+
+    this.reset();
+    this.bindControls();
+    this.lastTime = performance.now();
+    requestAnimationFrame(t => this.loop(t));
+  }
+
+  reset() {
+    this.board = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+    this.bag = [];
+    this.queue = [];
+    this.fillQueue();
+    this.hold = null;
+    this.canHold = true;
+    this.score = 0;
+    this.lines = 0;
+    this.level = 1;
+    this.combo = 0;
+    this.gameOver = false;
+    this.paused = false;
+    this.dropTimer = 0;
+    this.lockTimer = 0;
+    this.lockResets = 0;
+    this.softDrop = false;
+    this.particles = [];
+    this.clearAnim = null;
+    this.shake = 0;
+    this.flash = 0;
+    this.lastClearType = null;
+    this.updateStats(true);
+    this.spawn();
+    this.hideOverlay();
+  }
+
+  // 7-bag randomizer
+  fillQueue() {
+    while (this.queue.length < 5) {
+      if (this.bag.length === 0) {
+        this.bag = [...PIECE_KEYS].sort(() => Math.random() - 0.5);
+      }
+      this.queue.push(this.bag.shift());
+    }
+  }
+
+  spawn(type) {
+    type = type || this.queue.shift();
+    this.fillQueue();
+    const def = PIECES[type];
+    this.current = {
+      type,
+      color: def.color,
+      glow: def.glow,
+      cells: def.cells.map(c => [...c]),
+      rotation: 0,
+      x: 3,
+      y: type === 'I' ? -1 : 0,
+    };
+    this.lockTimer = 0;
+    this.lockResets = 0;
+    this.canHold = true;
+    if (this.collides(this.current, 0, 0)) {
+      this.gameOver = true;
+      this.showOverlay('GAME OVER', `Final score · ${this.score.toLocaleString()}`, true);
+    }
+  }
+
+  collides(piece, dx, dy, cells = piece.cells) {
+    for (const [cx, cy] of cells) {
+      const x = piece.x + cx + dx;
+      const y = piece.y + cy + dy;
+      if (x < 0 || x >= COLS || y >= ROWS) return true;
+      if (y >= 0 && this.board[y][x]) return true;
+    }
+    return false;
+  }
+
+  rotateCells(cells, dir) {
+    // rotate around a 4x4 bounding box for I, 3x3 for others
+    const size = 4;
+    const out = cells.map(([x, y]) => {
+      // translate to center of bounding
+      const nx = dir > 0 ? size - 1 - y : y;
+      const ny = dir > 0 ? x : size - 1 - x;
+      return [nx, ny];
+    });
+    return out;
+  }
+
+  rotate(dir) {
+    if (this.gameOver || this.paused || !this.current) return;
+    if (this.current.type === 'O') return; // no rotation
+    const newCells = this.rotateCells(this.current.cells, dir);
+    // try kicks
+    for (const [kx, ky] of KICKS) {
+      if (!this.collides(this.current, kx, ky, newCells)) {
+        this.current.cells = newCells;
+        this.current.x += kx;
+        this.current.y += ky;
+        this.current.rotation = (this.current.rotation + dir + 4) % 4;
+        this.resetLock();
+        this.playSound('rotate');
+        return;
+      }
+    }
+  }
+
+  move(dx) {
+    if (this.gameOver || this.paused || !this.current) return;
+    if (!this.collides(this.current, dx, 0)) {
+      this.current.x += dx;
+      this.resetLock();
+    }
+  }
+
+  softDropStep() {
+    if (!this.collides(this.current, 0, 1)) {
+      this.current.y += 1;
+      this.score += 1;
+      this.updateStats();
+    } else {
+      this.tryLock();
+    }
+  }
+
+  hardDrop() {
+    if (this.gameOver || this.paused || !this.current) return;
+    let dist = 0;
+    while (!this.collides(this.current, 0, 1)) {
+      this.current.y += 1;
+      dist++;
+    }
+    this.score += dist * 2;
+    this.shake = Math.min(8, 3 + dist * 0.15);
+    this.spawnHardDropTrail();
+    this.tryLock();
+  }
+
+  spawnHardDropTrail() {
+    if (!this.current) return;
+    for (const [cx, cy] of this.current.cells) {
+      const x = (this.current.x + cx) * CELL + CELL/2;
+      const y = (this.current.y + cy) * CELL + CELL/2;
+      for (let i = 0; i < 3; i++) {
+        this.particles.push({
+          x, y: y - i * 4,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: -Math.random() * 2 - 1,
+          life: 1, size: 2 + Math.random() * 2,
+          color: this.current.glow,
+        });
+      }
+    }
+  }
+
+  holdPiece() {
+    if (this.gameOver || this.paused || !this.canHold || !this.current) return;
+    const cur = this.current.type;
+    if (this.hold) {
+      const tmp = this.hold;
+      this.hold = cur;
+      this.spawn(tmp);
+    } else {
+      this.hold = cur;
+      this.spawn();
+    }
+    this.canHold = false;
+    this.playSound('hold');
+  }
+
+  resetLock() {
+    if (this.lockResets < 15 && this.collides(this.current, 0, 1)) {
+      this.lockTimer = 0;
+      this.lockResets++;
+    }
+  }
+
+  tryLock() {
+    if (!this.current) return;
+    // place cells
+    for (const [cx, cy] of this.current.cells) {
+      const x = this.current.x + cx;
+      const y = this.current.y + cy;
+      if (y >= 0 && y < ROWS && x >= 0 && x < COLS) {
+        this.board[y][x] = { color: this.current.color, glow: this.current.glow };
+      }
+    }
+    this.current = null;
+    this.clearLines();
+  }
+
+  clearLines() {
+    const cleared = [];
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (this.board[y].every(c => c !== null)) cleared.push(y);
+    }
+    if (cleared.length === 0) {
+      this.combo = 0;
+      this.spawn();
+      return;
+    }
+    // start clear animation
+    this.clearAnim = {
+      rows: cleared,
+      t: 0,
+      duration: 0.4,
+    };
+    // particles
+    for (const y of cleared) {
+      for (let x = 0; x < COLS; x++) {
+        const cell = this.board[y][x];
+        for (let i = 0; i < 4; i++) {
+          this.particles.push({
+            x: x * CELL + CELL/2,
+            y: y * CELL + CELL/2,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6 - 1,
+            life: 1, size: 2 + Math.random() * 3,
+            color: cell.color,
+            decay: 1.5 + Math.random(),
+          });
+        }
+      }
+    }
+    const types = ['Single','Double','Triple','TETRIS!'];
+    this.lastClearType = types[cleared.length - 1];
+    this.showToast(this.lastClearType + (this.combo > 0 ? ` · Combo x${this.combo + 1}` : ''));
+    this.shake = cleared.length === 4 ? 14 : 6;
+    if (cleared.length === 4) this.flash = 1;
+  }
+
+  finishClear() {
+    const rows = this.clearAnim.rows.slice().sort((a,b) => a - b);
+    // remove rows from bottom up
+    for (const y of rows.sort((a,b) => b - a)) {
+      this.board.splice(y, 1);
+      this.board.unshift(Array(COLS).fill(null));
+    }
+    const n = rows.length;
+    const baseScores = [0, 100, 300, 500, 800];
+    this.combo++;
+    let gained = baseScores[n] * this.level + this.combo * 50 * this.level;
+    this.score += gained;
+    this.lines += n;
+    const newLevel = Math.floor(this.lines / 10) + 1;
+    if (newLevel > this.level) {
+      this.level = newLevel;
+      this.showToast(`LEVEL UP · ${this.level}`);
+    }
+    this.clearAnim = null;
+    this.updateStats(true);
+    this.spawn();
+  }
+
+  ghostY() {
+    if (!this.current) return 0;
+    let dy = 0;
+    while (!this.collides(this.current, 0, dy + 1)) dy++;
+    return this.current.y + dy;
+  }
+
+  updateStats(bump) {
+    const s = document.getElementById('score');
+    const l = document.getElementById('lines');
+    const lv = document.getElementById('level');
+    s.textContent = this.score.toLocaleString();
+    l.textContent = this.lines;
+    lv.textContent = this.level;
+    if (bump) {
+      [s, l, lv].forEach(el => {
+        el.classList.remove('bump');
+        void el.offsetWidth;
+        el.classList.add('bump');
+        setTimeout(() => el.classList.remove('bump'), 250);
+      });
+    }
+  }
+
+  showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => t.classList.remove('show'), 1400);
+  }
+
+  showOverlay(title, sub, gameOver) {
+    const o = document.getElementById('overlay');
+    document.getElementById('overlayTitle').textContent = title;
+    document.getElementById('overlaySub').textContent = sub;
+    document.getElementById('overlayBtn').style.display = gameOver ? 'inline-block' : 'none';
+    o.classList.add('show');
+  }
+  hideOverlay() {
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  togglePause() {
+    if (this.gameOver) return;
+    this.paused = !this.paused;
+    if (this.paused) this.showOverlay('PAUSED', 'Press P to resume', false);
+    else this.hideOverlay();
+  }
+
+  bindControls() {
+    const keys = {};
+    const dasDelay = 150, dasRate = 40;
+    document.addEventListener('keydown', e => {
+      if (this.gameOver && e.key.toLowerCase() !== 'r') return;
+      const k = e.key;
+      if (['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(k)) e.preventDefault();
+      const kl = k.toLowerCase();
+      if (kl === 'r') { this.reset(); return; }
+      if (this.paused) {
+        if (kl === 'p') this.togglePause();
+        return;
+      }
+      if (k === 'ArrowLeft') { this.move(-1); keys.left = { time: performance.now(), repeat: false }; }
+      else if (k === 'ArrowRight') { this.move(1); keys.right = { time: performance.now(), repeat: false }; }
+      else if (k === 'ArrowDown') { this.softDrop = true; }
+      else if (k === 'ArrowUp' || kl === 'x') { this.rotate(1); }
+      else if (kl === 'z') { this.rotate(-1); }
+      else if (k === ' ') { this.hardDrop(); }
+      else if (kl === 'c') { this.holdPiece(); }
+      else if (kl === 'p') { this.togglePause(); }
+    });
+    document.addEventListener('keyup', e => {
+      const k = e.key;
+      if (k === 'ArrowLeft') delete keys.left;
+      if (k === 'ArrowRight') delete keys.right;
+      if (k === 'ArrowDown') this.softDrop = false;
+    });
+    document.getElementById('overlayBtn').addEventListener('click', () => this.reset());
+    this._keys = keys;
+    this._dasDelay = dasDelay;
+    this._dasRate = dasRate;
+  }
+
+  handleDAS(now) {
+    if (!this.current || this.paused || this.gameOver) return;
+    if (this._keys.left) {
+      const t = this._keys.left;
+      if (now - t.time > this._dasDelay) {
+        if (!t.repeat || now - t.last > this._dasRate) {
+          this.move(-1);
+          t.last = now;
+          t.repeat = true;
+        }
+      }
+    }
+    if (this._keys.right) {
+      const t = this._keys.right;
+      if (now - t.time > this._dasDelay) {
+        if (!t.repeat || now - t.last > this._dasRate) {
+          this.move(1);
+          t.last = now;
+          t.repeat = true;
+        }
+      }
+    }
+  }
+
+  // simple beep synth
+  playSound(type) {
+    try {
+      if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = this.audioCtx;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      const freqs = { rotate: 440, hold: 520, move: 220 };
+      o.frequency.value = freqs[type] || 300;
+      o.type = 'triangle';
+      g.gain.setValueAtTime(0.05, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+      o.start();
+      o.stop(ctx.currentTime + 0.08);
+    } catch(e) {}
+  }
+
+  loop(time) {
+    const dt = Math.min(0.05, (time - this.lastTime) / 1000);
+    this.lastTime = time;
+    if (!this.paused && !this.gameOver) this.update(dt, time);
+    this.render();
+    requestAnimationFrame(t => this.loop(t));
+  }
+
+  update(dt, now) {
+    this.handleDAS(now);
+
+    if (this.clearAnim) {
+      this.clearAnim.t += dt;
+      if (this.clearAnim.t >= this.clearAnim.duration) this.finishClear();
+      return;
+    }
+
+    // particles
+    for (const p of this.particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.life -= dt * (p.decay || 1.2);
+    }
+    this.particles = this.particles.filter(p => p.life > 0);
+
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 30);
+    if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 3);
+
+    if (!this.current) return;
+
+    const speed = this.softDrop ? 0.04 : Math.max(0.05, 0.8 - (this.level - 1) * 0.07);
+    this.dropTimer += dt;
+    if (this.dropTimer >= speed) {
+      this.dropTimer = 0;
+      if (!this.collides(this.current, 0, 1)) {
+        this.current.y += 1;
+        if (this.softDrop) { this.score += 1; this.updateStats(); }
+      } else {
+        // start lock timer
+        this.lockTimer += dt * 1000;
+        if (this.lockTimer >= 500) this.tryLock();
+      }
+    }
+  }
+
+  // ---------------- RENDERING ----------------
+  render() {
+    const ctx = this.ctx;
+    ctx.save();
+    // shake
+    if (this.shake > 0) {
+      ctx.translate(
+        (Math.random() - 0.5) * this.shake,
+        (Math.random() - 0.5) * this.shake
+      );
+    }
+
+    // background
+    ctx.fillStyle = '#06060a';
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 1; x < COLS; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, ROWS * CELL);
+      ctx.stroke();
+    }
+    for (let y = 1; y < ROWS; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * CELL); ctx.lineTo(COLS * CELL, y * CELL);
+      ctx.stroke();
+    }
+
+    // placed cells
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const c = this.board[y][x];
+        if (!c) continue;
+        let alpha = 1, scale = 1, extraGlow = 0;
+        if (this.clearAnim && this.clearAnim.rows.includes(y)) {
+          const p = this.clearAnim.t / this.clearAnim.duration;
+          alpha = 1 - p;
+          scale = 1 + p * 0.15;
+          extraGlow = (1 - p) * 1.5;
+          if (p > 0.5 && Math.floor(p * 20) % 2 === 0) {
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+            ctx.globalAlpha = 1;
+            continue;
+          }
+        }
+        this.drawCell(ctx, x, y, c.color, c.glow, alpha, scale, extraGlow);
+      }
+    }
+
+    // ghost
+    if (this.current && !this.clearAnim) {
+      const gy = this.ghostY();
+      for (const [cx, cy] of this.current.cells) {
+        const x = this.current.x + cx;
+        const y = gy + cy;
+        if (y < 0) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = this.current.color;
+        ctx.fillRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = this.current.color;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
+        ctx.restore();
+      }
+      // current piece
+      for (const [cx, cy] of this.current.cells) {
+        const x = this.current.x + cx;
+        const y = this.current.y + cy;
+        if (y < 0) continue;
+        this.drawCell(ctx, x, y, this.current.color, this.current.glow, 1, 1, 0.5);
+      }
+    }
+
+    // particles
+    for (const p of this.particles) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // flash
+    if (this.flash > 0) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${this.flash * 0.3})`;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    ctx.restore();
+
+    this.renderMini();
+  }
+
+  drawCell(ctx, x, y, color, glow, alpha = 1, scale = 1, extraGlow = 0) {
+    const px = x * CELL;
+    const py = y * CELL;
+    const size = CELL * scale;
+    const offset = (CELL - size) / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // glow
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 8 + extraGlow * 8;
+    // gradient fill
+    const g = ctx.createLinearGradient(px, py, px, py + CELL);
+    g.addColorStop(0, this.lighten(color, 0.25));
+    g.addColorStop(1, color);
+    ctx.fillStyle = g;
+    ctx.fillRect(px + 1 + offset, py + 1 + offset, size - 2, size - 2);
+    ctx.shadowBlur = 0;
+    // inner highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(px + 2 + offset, py + 2 + offset, size - 4, 3);
+    // inner border
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 1.5 + offset, py + 1.5 + offset, size - 3, size - 3);
+    ctx.restore();
+  }
+
+  lighten(hex, amt) {
+    const m = hex.match(/^#([0-9a-f]{6})$/i);
+    if (!m) return hex;
+    const num = parseInt(m[1], 16);
+    let r = (num >> 16) + Math.round(255 * amt);
+    let g = ((num >> 8) & 0xff) + Math.round(255 * amt);
+    let b = (num & 0xff) + Math.round(255 * amt);
+    r = Math.min(255, r); g = Math.min(255, g); b = Math.min(255, b);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  renderMini() {
+    // hold
+    this.drawMini(this.holdCanvas, this.hold, this.canHold);
+    // next
+    this.nextCanvases.forEach((c, i) => {
+      this.drawMini(c, this.queue[i], true);
+    });
+  }
+
+  drawMini(canvas, type, active) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    // bg
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(0, 0, w, h);
+    if (!type) return;
+    const def = PIECES[type];
+    // find bounding box of cells
+    const cells = def.cells;
+    const xs = cells.map(c => c[0]), ys = cells.map(c => c[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const wCells = maxX - minX + 1;
+    const hCells = maxY - minY + 1;
+    const size = Math.min(w / (wCells + 1), h / (hCells + 1)) * devicePixelRatio;
+    const ox = (w - size * wCells) / 2;
+    const oy = (h - size * hCells) / 2;
+    ctx.save();
+    if (!active) ctx.globalAlpha = 0.35;
+    for (const [cx, cy] of cells) {
+      const px = ox + (cx - minX) * size;
+      const py = oy + (cy - minY) * size;
+      ctx.shadowColor = def.glow;
+      ctx.shadowBlur = 10 * devicePixelRatio;
+      const g = ctx.createLinearGradient(px, py, px, py + size);
+      g.addColorStop(0, this.lighten(def.color, 0.25));
+      g.addColorStop(1, def.color);
+      ctx.fillStyle = g;
+      ctx.fillRect(px + 1, py + 1, size - 2, size - 2);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(px + 2, py + 2, size - 4, 3);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px + 1.5, py + 1.5, size - 3, size - 3);
+    }
+    ctx.restore();
+  }
+}
+
+window.addEventListener('load', () => {
+  new Tetris();
+});
+</script>
+</body>
+</html>

@@ -40,7 +40,7 @@ describe("parseArgs", () => {
 });
 
 describe("loadConfig (canonical manifest)", () => {
-  it("loads the 5 canonical games with exact slugs", async () => {
+  it("loads the 9 canonical games with exact slugs", async () => {
     const { games } = await loadConfig();
     expect(games.map((g) => g.slug)).toEqual([
       "pong",
@@ -48,12 +48,16 @@ describe("loadConfig (canonical manifest)", () => {
       "breakout",
       "space-invaders",
       "asteroids",
+      "pac-man",
+      "missile-command",
+      "frogger",
+      "tetris",
     ]);
     const pong = games.find((g) => g.slug === "pong");
     expect(pong).toMatchObject({ name: "Pong", year: 1972, creator: "Atari" });
   });
 
-  it("loads the 9 canonical models with exact slugs and openrouter ids", async () => {
+  it("loads the 10 canonical models with exact slugs and openrouter ids", async () => {
     const { models } = await loadConfig();
     expect(models.map((m) => m.slug)).toEqual([
       "gemini-flash-lite",
@@ -65,6 +69,7 @@ describe("loadConfig (canonical manifest)", () => {
       "claude-opus-4-8",
       "gpt-5-5",
       "gemini-3-1-pro",
+      "glm-5-2",
     ]);
     const byId = Object.fromEntries(models.map((m) => [m.slug, m.openrouterId]));
     expect(byId["gemini-flash-lite"]).toBe("google/gemini-2.5-flash-lite");
@@ -76,5 +81,6 @@ describe("loadConfig (canonical manifest)", () => {
     expect(byId["claude-opus-4-8"]).toBe("anthropic/claude-opus-4.8");
     expect(byId["gpt-5-5"]).toBe("openai/gpt-5.5");
     expect(byId["gemini-3-1-pro"]).toBe("google/gemini-3.1-pro-preview");
+    expect(byId["glm-5-2"]).toBe("z-ai/glm-5.2");
   });
 });

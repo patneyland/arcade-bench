@@ -3,5 +3,9 @@
   { "slug": "snake", "name": "Snake", "year": 1976, "creator": "Gremlin" },
   { "slug": "breakout", "name": "Breakout", "year": 1976, "creator": "Atari" },
   { "slug": "space-invaders", "name": "Space Invaders", "year": 1978, "creator": "Taito" },
-  { "slug": "asteroids", "name": "Asteroids", "year": 1979, "creator": "Atari" }
+  { "slug": "asteroids", "name": "Asteroids", "year": 1979, "creator": "Atari" },
+  { "slug": "pac-man", "name": "Pac-Man", "year": 1980, "creator": "Namco" },
+  { "slug": "missile-command", "name": "Missile Command", "year": 1980, "creator": "Atari" },
+  { "slug": "frogger", "name": "Frogger", "year": 1981, "creator": "Konami" },
+  { "slug": "tetris", "name": "Tetris", "year": 1985, "creator": "Alexey Pajitnov" }
 ]

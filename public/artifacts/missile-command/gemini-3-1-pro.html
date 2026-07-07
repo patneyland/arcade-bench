@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Missile Command HTML5</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #000;
+            border: 2px solid #333;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            cursor: none; /* Hide default mouse cursor to use our crosshair */
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game Constants
+    const CANVAS_WIDTH = canvas.width;
+    const CANVAS_HEIGHT = canvas.height;
+    const GROUND_Y = CANVAS_HEIGHT - 40;
+    
+    // Game State
+    let gameState = 'START'; // START, PLAYING, WAVEOVER, GAMEOVER
+    let score = 0;
+    let wave = 1;
+    let mouseX = CANVAS_WIDTH / 2;
+    let mouseY = CANVAS_HEIGHT / 2;
+
+    // Entities
+    let cities = [];
+    let bases = [];
+    let enemyMissiles = [];
+    let playerMissiles = [];
+    let explosions = [];
+    
+    // Wave Management
+    let enemiesToSpawn = 0;
+    let enemySpawnTimer = 0;
+
+    class City {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.width = 40;
+            this.height = 20;
+            this.alive = true;
+        }
+        draw() {
+            if (!this.alive) return;
+            ctx.fillStyle = '#0ff'; // Cyan
+            ctx.fillRect(this.x - this.width/2, this.y - this.height, this.width, this.height);
+            ctx.fillRect(this.x - this.width/4, this.y - this.height - 10, this.width/2, 10);
+        }
+    }
+
+    class Base {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.ammo = 10;
+            this.alive = true;
+        }
+        draw() {
+            if (!this.alive) return;
+            // Draw dome
+            ctx.fillStyle = '#ff0'; // Yellow
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, 25, Math.PI, 0);
+            ctx.fill();
+            
+            // Draw ammo count visually
+            ctx.fillStyle = '#000';
+            ctx.font = '14px Courier';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.ammo, this.x, this.y - 5);
+        }
+    }
+
+    class Missile {
+        constructor(startX, startY, targetX, targetY, speed, isEnemy) {
+            this.startX = startX;
+            this.startY = startY;
+            this.x = startX;
+            this.y = startY;
+            this.targetX = targetX;
+            this.targetY = targetY;
+            this.speed = speed;
+            this.isEnemy = isEnemy;
+            this.active = true;
+
+            const dx = targetX - startX;
+            const dy = targetY - startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            this.vx = (dx / dist) * this.speed;
+            this.vy = (dy / dist) * this.speed;
+        }
+
+        update() {
+            if (!this.active) return;
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // Check if reached destination
+            if ((this.vy > 0 && this.y >= this.targetY) || 
+                (this.vy < 0 && this.y <= this.targetY)) {
+                this.active = false;
+                
+                if (this.isEnemy) {
+                    // Enemy hit ground/city/base
+                    createExplosion(this.x, this.y, 40, '#f00'); // Red explosion
+                    checkGroundCollisions(this.x, this.y);
+                } else {
+                    // Player missile reached target
+                    createExplosion(this.targetX, this.targetY, 50, '#fff'); // White/Blue explosion
+                }
+            }
+        }
+
+        draw() {
+            if (!this.active) return;
+            // Trail
+            ctx.strokeStyle = this.isEnemy ? '#f00' : '#00f';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(this.startX, this.startY);
+            ctx.lineTo(this.x, this.y);
+            ctx.stroke();
+
+            // Warhead
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(this.x - 1, this.y - 1, 3, 3);
+        }
+    }
+
+    class Explosion {
+        constructor(x, y, maxRadius, color) {
+            this.x = x;
+            this.y = y;
+            this.radius = 2;
+            this.maxRadius = maxRadius;
+            this.expanding = true;
+            this.color = color;
+            this.active = true;
+            this.growthRate = 1.5;
+        }
+
+        update() {
+            if (this.expanding) {
+                this.radius += this.growthRate;
+                if (this.radius >= this.maxRadius) this.expanding = false;
+            } else {
+                this.radius -= this.growthRate;
+                if (this.radius <= 0) this.active = false;
+            }
+        }
+
+        draw() {
+            if (!this.active) return;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // --- GAME LOGIC ---
+
+    function initGame() {
+        score = 0;
+        wave = 1;
+        initWave();
+    }
+
+    function initWave() {
+        // Init Cities (6 total, 3 on left, 3 on right of center base)
+        if (wave === 1) {
+            cities = [];
+            const cityPositions = [120, 200, 280, 520, 600, 680];
+            cityPositions.forEach(x => cities.push(new City(x, GROUND_Y)));
+        }
+
+        // Init Bases (Left, Center, Right)
+        bases = [
+            new Base(40, GROUND_Y),
+            new Base(400, GROUND_Y),
+            new Base(760, GROUND_Y)
+        ];
+
+        enemyMissiles = [];
+        playerMissiles = [];
+        explosions = [];
+        
+        enemiesToSpawn = 10 + (wave * 2);
+        enemySpawnTimer = 0;
+        gameState = 'PLAYING';
+    }
+
+    function spawnEnemy() {
+        const startX = Math.random() * CANVAS_WIDTH;
+        const startY = 0;
+        
+        // Pick a target (City or Base)
+        let possibleTargets = [...cities.filter(c => c.alive), ...bases.filter(b => b.alive)];
+        
+        if (possibleTargets.length === 0) return; // Game over essentially
+        
+        const target = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+        
+        // Speed increases with wave
+        const speed = 0.5 + (wave * 0.15);
+        
+        enemyMissiles.push(new Missile(startX, startY, target.x, target.y + 10, speed, true));
+    }
+
+    function firePlayerMissile(targetX, targetY) {
+        if (gameState !== 'PLAYING') {
+            if (gameState === 'START' || gameState === 'GAMEOVER') initGame();
+            if (gameState === 'WAVEOVER') {
+                wave++;
+                initWave();
+            }
+            return;
+        }
+
+        // Prevent firing below ground
+        if (targetY > GROUND_Y - 20) targetY = GROUND_Y - 20;
+
+        // Find closest base with ammo
+        let closestBase = null;
+        let minDistance = Infinity;
+
+        bases.forEach(base => {
+            if (base.alive && base.ammo > 0) {
+                const dist = Math.abs(base.x - targetX);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestBase = base;
+                }
+            }
+        });
+
+        if (closestBase) {
+            closestBase.ammo--;
+            playerMissiles.push(new Missile(closestBase.x, closestBase.y, targetX, targetY, 15, false));
+        }
+    }
+
+    function createExplosion(x, y, radius, color) {
+        explosions.push(new Explosion(x, y, radius, color));
+    }
+
+    function checkGroundCollisions(x, y) {
+        // Destroy cities
+        cities.forEach(city => {
+            if (city.alive && Math.abs(city.x - x) < 30) {
+                city.alive = false;
+            }
+        });
+        
+        // Destroy bases
+        bases.forEach(base => {
+            if (base.alive && Math.abs(base.x - x) < 35) {
+                base.alive = false;
+                base.ammo = 0; // Lose ammo when base is destroyed
+            }
+        });
+    }
+
+    function checkExplosionCollisions() {
+        explosions.forEach(exp => {
+            if (!exp.active) return;
+            
+            enemyMissiles.forEach(enemy => {
+                if (!enemy.active) return;
+                
+                const dx = exp.x - enemy.x;
+                const dy = exp.y - enemy.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist <= exp.radius) {
+                    enemy.active = false;
+                    score += 25 * wave;
+                    // Secondary chain explosion (optional, makes it easier. Standard in exact arcade)
+                    // createExplosion(enemy.x, enemy.y, 30, '#ff0'); 
+                }
+            });
+        });
+    }
+
+    // --- INPUT ---
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 0) firePlayerMissile(mouseX, mouseY);
+    });
+
+    // --- MAIN LOOP ---
+    function update() {
+        if (gameState === 'PLAYING') {
+            // Spawn enemies
+            if (enemiesToSpawn > 0) {
+                enemySpawnTimer--;
+                if (enemySpawnTimer <= 0) {
+                    spawnEnemy();
+                    enemiesToSpawn--;
+                    enemySpawnTimer = 60 - (wave * 2); // Faster spawning each wave
+                    if (enemySpawnTimer < 10) enemySpawnTimer = 10;
+                }
+            }
+
+            // Update entities
+            playerMissiles.forEach(m => m.update());
+            enemyMissiles.forEach(m => m.update());
+            explosions.forEach(e => e.update());
+
+            // Check collisions
+            checkExplosionCollisions();
+
+            // Cleanup inactive entities
+            playerMissiles = playerMissiles.filter(m => m.active);
+            enemyMissiles = enemyMissiles.filter(m => m.active);
+            explosions = explosions.filter(e => e.active);
+
+            // Check Wave Over
+            if (enemiesToSpawn === 0 && enemyMissiles.length === 0 && explosions.length === 0) {
+                gameState = 'WAVEOVER';
+                // Bonus scoring
+                let aliveCities = cities.filter(c => c.alive).length;
+                let remainingAmmo = bases.reduce((sum, b) => sum + b.ammo, 0);
+                score += (aliveCities * 100) + (remainingAmmo * 5);
+            }
+
+            // Check Game Over
+            let aliveCities = cities.filter(c => c.alive).length;
+            if (aliveCities === 0) {
+                gameState = 'GAMEOVER';
+            }
+        }
+    }
+
+    function draw() {
+        // Clear screen
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // Draw Ground
+        ctx.fillStyle = '#aa0'; // Dark Yellow
+        ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, CANVAS_HEIGHT - GROUND_Y);
+
+        // Draw entities
+        cities.forEach(c => c.draw());
+        bases.forEach(b => b.draw());
+        playerMissiles.forEach(m => m.draw());
+        enemyMissiles.forEach(m => m.draw());
+        explosions.forEach(e => e.draw());
+
+        // UI & Text
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px Courier';
+        ctx.textAlign = 'left';
+        ctx.fillText(`SCORE: ${score}`, 20, 30);
+        ctx.textAlign = 'right';
+        ctx.fillText(`WAVE: ${wave}`, CANVAS_WIDTH - 20, 30);
+
+        ctx.textAlign = 'center';
+        if (gameState === 'START') {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.fillStyle = '#f00';
+            ctx.font = '40px Courier';
+            ctx.fillText('MISSILE COMMAND', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 40);
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Courier';
+            ctx.fillText('CLICK TO START AND FIRE', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 20);
+        } else if (gameState === 'WAVEOVER') {
+            ctx.fillStyle = '#0f0';
+            ctx.font = '40px Courier';
+            ctx.fillText(`WAVE ${wave} COMPLETE`, CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 20);
+            ctx.font = '20px Courier';
+            ctx.fillText('CLICK TO CONTINUE', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
+        } else if (gameState === 'GAMEOVER') {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            ctx.fillStyle = '#f00';
+            ctx.font = '50px Courier';
+            ctx.fillText('GAME OVER', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 - 20);
+            ctx.fillStyle = '#fff';
+            ctx.font = '20px Courier';
+            ctx.fillText('CLICK TO RESTART', CANVAS_WIDTH/2, CANVAS_HEIGHT/2 + 30);
+        }
+
+        // Draw Crosshair
+        if (gameState === 'PLAYING') {
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(mouseX - 10, mouseY);
+            ctx.lineTo(mouseX + 10, mouseY);
+            ctx.moveTo(mouseX, mouseY - 10);
+            ctx.lineTo(mouseX, mouseY + 10);
+            ctx.stroke();
+        }
+    }
+
+    function loop() {
+        update();
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    // Start
+    loop();
+</script>
+
+</body>
+</html>
