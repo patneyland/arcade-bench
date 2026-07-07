@@ -1,12 +1,14 @@
 // The Arcade — the free, public product (docs/ux-overhaul.md §7): browse and
 // play ONLY certified-playable builds (≥ CERTIFIED_PLAYABLE_PCT), grouped by
-// game, model identity shown. No intro essay: a slim marquee band, then cabinets.
+// game, model identity shown. No intro essay: a slim marquee band, then a floor
+// of small thumbnail cabinets — each card is the coin gate (brand, params,
+// tokens spent); clicking it opens the pop-up play window (owner 2026-07-06).
 
 import Link from "next/link";
 import { Show, SignInButton } from "@clerk/nextjs";
 import { getArcade } from "@/lib/data";
 import type { ArcadeEntry, GameView } from "@/lib/types";
-import { ArcadeCabinet } from "@/components/ArcadeCabinet";
+import { ArcadeFloor } from "@/components/ArcadeFloor";
 import { ButtonLink } from "@/components/Button";
 import { Container } from "@/components/Layout";
 
@@ -41,29 +43,7 @@ export default async function ArcadePage() {
         </div>
       </Container>
 
-      {sections.length > 0 ? (
-        sections.map(({ game, cabinets }) => (
-          <Container key={game.slug} className="pb-12">
-            <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <h2 className="font-grotesk text-[24px] font-bold tracking-[-0.01em]">
-                {game.title}
-              </h2>
-              <span className="font-mono text-[12px] text-ink-soft">
-                {game.year} · {game.creator} · {cabinets.length} certified{" "}
-                {cabinets.length === 1 ? "build" : "builds"}
-              </span>
-            </div>
-            {/* 2-up ≥1024px keeps each playable frame ~460px+; 1-up below. */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {cabinets.map((entry) => (
-                <ArcadeCabinet key={entry.generationId} entry={entry} />
-              ))}
-            </div>
-          </Container>
-        ))
-      ) : (
-        <EmptyArcade />
-      )}
+      {sections.length > 0 ? <ArcadeFloor sections={sections} /> : <EmptyArcade />}
     </main>
   );
 }

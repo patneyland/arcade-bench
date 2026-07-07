@@ -25,6 +25,28 @@ describe("SandboxedPlayer", () => {
     expect(container.querySelector("iframe")).not.toBeNull();
   });
 
+  // autoStart is for surfaces where an explicit click already opened the player
+  // (the arcade's pop-up window) — the gate's "no game before someone is looking"
+  // job is done by that click.
+  it("autoStart mounts the iframe immediately with the same strict sandbox, and reports the start", () => {
+    const onStarted = vi.fn();
+    const { container, queryByRole } = render(
+      <SandboxedPlayer
+        artifactPath="/artifacts/pong/qwen3-4b.html"
+        title="Pong — Qwen3 4B"
+        autoStart
+        onStarted={onStarted}
+      />,
+    );
+    expect(queryByRole("button", { name: /insert coin/i })).toBeNull();
+    const iframe = container.querySelector("iframe");
+    expect(iframe).not.toBeNull();
+    const sandbox = iframe!.getAttribute("sandbox") ?? "";
+    expect(sandbox).toContain("allow-scripts");
+    expect(sandbox).not.toContain("allow-same-origin");
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
   it("fires onStarted when the gate is clicked", () => {
     const onStarted = vi.fn();
     renderStarted({ onStarted });

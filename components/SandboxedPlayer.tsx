@@ -100,6 +100,11 @@ export interface SandboxedPlayerProps {
   accent?: "blue" | "red";
   /** Fires once, the first time the player starts this build. */
   onStarted?: () => void;
+  /** Skip the INSERT COIN gate and mount the iframe immediately. ONLY for surfaces
+   *  where an explicit click already opened the player (the arcade's pop-up play
+   *  window) — the gate's job is "no game runs before someone is looking", and
+   *  that click satisfies it. Focus/scroll-lock handoff still runs on load. */
+  autoStart?: boolean;
 }
 
 type Fit = { scale: number; x: number; y: number };
@@ -110,9 +115,17 @@ export function SandboxedPlayer({
   className,
   accent = "blue",
   onStarted,
+  autoStart = false,
 }: SandboxedPlayerProps) {
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(autoStart);
   const [runId, setRunId] = useState(0);
+  // autoStart skips the gate click that normally reports the start — fire it once here.
+  const autoStartReported = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStartReported.current) return;
+    autoStartReported.current = true;
+    onStarted?.();
+  }, [autoStart, onStarted]);
   const [focused, setFocused] = useState(false);
   // scale=1 until measured — a zero-size box (off-stage frame, jsdom) keeps the last fit.
   const [fit, setFit] = useState<Fit>({ scale: 1, x: 0, y: 0 });

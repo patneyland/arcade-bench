@@ -38,6 +38,17 @@
   mirrored to `?game=<slug>`. `getNextTestCandidate(gameSlug?)` + `getTestableGames()`
   in lib/data, `/api/playability/next?game=` param. 111 tests green (typecheck only;
   no live pass yet).
+- [x] **7b. Arcade thumbnail floor** (owner direction 2026-07-06) — shipped:
+  /arcade cabinets are now small identity thumbnails (4-up desktop / 2-up phone),
+  not playable frames. Each card IS the coin gate: vendor dot + name, model name,
+  grape params chip, tokens-spent chip (`ArcadeEntry.tokensOut`, new on the
+  contract from `Generation.tokensOut`), slim ✓ %-playable footer. Clicking opens
+  the PlayWindow modal (`components/ArcadeFloor.tsx`) — SandboxedPlayer at full
+  stage size with a new `autoStart` prop (the card click is the coin drop; strict
+  sandbox unchanged), PROMPT tab, full identity + certification strip. Close via
+  ✕ / backdrop / Esc (Esc only reaches the window while focus is outside the
+  cross-origin game frame — browser constraint). Home teaser keeps the big
+  playable ArcadeCabinet. 125 tests green + live Playwright pass at 1440/390.
 
 > Post-ship note: all of the above verified by tests + `next build` only — Docker
 > was down, so no live visual pass yet. First session with the local stack up:
