@@ -14,7 +14,11 @@
 // What it NEVER does: delete or update ANY existing source-of-truth row. No
 // votes, playability votes, users, or existing generations are modified — this
 // is safe to run against a live database with real votes (it is the script used
-// to promote new builds to production). The one derived table it DOES rebuild is
+// to promote new builds to production). It also runs automatically as part of
+// `npm run build`, so every Vercel production deploy syncs the roster + manifest
+// into the prod DB — adding a game/model is just a commit + merge. Builds with
+// no DATABASE_URL (e.g. preview environments) skip the sync gracefully.
+// The one derived table it DOES rebuild is
 // Rating (step 4): the leaderboard only lists models that have Rating rows, so
 // after adding models we recompute ratings from the (untouched) votes — new
 // models land at the default rating with 0 votes. Environment-agnostic:
@@ -57,6 +61,14 @@ async function readManifest(): Promise<ManifestRecord[]> {
 }
 
 async function main() {
+  // PrismaClient's constructor already loaded .env, so this check covers both a
+  // real env var and a local .env file. No DB configured -> nothing to sync
+  // (preview builds, fresh clones) — skip instead of crashing the build.
+  if (!process.env.DATABASE_URL) {
+    console.log("sync-roster: DATABASE_URL not set — skipping DB sync.");
+    return;
+  }
+
   console.log("sync-roster: additive upsert of models/games + missing generations.");
 
   // 1) Upsert models (never delete — no roster pruning here, unlike the seed).

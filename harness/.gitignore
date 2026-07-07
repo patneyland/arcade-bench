@@ -1,3 +1,5 @@
 node_modules/
 dist/
-out/
+# out/ holds run output; ONLY the manifest is tracked (sync-roster reads it at build time)
+out/*
+!out/manifest.json
