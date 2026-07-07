@@ -29,6 +29,14 @@ const config: Config = {
         mono: ["var(--font-jetbrains-mono)", "monospace"],
       },
       borderRadius: { DEFAULT: "14px", btn: "12px", chip: "9px" },
+      // Attract-mode blink for the arcade thumbnails' INSERT COIN label (hover,
+      // motion-safe only). steps(2) = hard on/off, no fade — CRT, not CSS.
+      keyframes: {
+        "coin-blink": { "50%": { opacity: "0.25" } },
+      },
+      animation: {
+        "coin-blink": "coin-blink 0.9s steps(2, start) infinite",
+      },
       boxShadow: {
         hard: "4px 4px 0 #1B1A22",
         "hard-sm": "3px 3px 0 #1B1A22",

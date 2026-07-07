@@ -28,6 +28,19 @@ export function ParamChip({ params }: { params: string | null }) {
   );
 }
 
+/** "9.2k tokens" — tokens the model spent writing one build (Generation.tokensOut). */
+export function TokenChip({ tokensOut }: { tokensOut: number }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-ink px-2.5 py-1 font-mono text-[12px] font-bold text-cream">
+      {formatTokens(tokensOut)} tokens
+    </span>
+  );
+}
+
+export function formatTokens(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
 /** Cost chip: white pill, mono. */
 export function CostChip({ costPerGen }: { costPerGen: number }) {
   return (

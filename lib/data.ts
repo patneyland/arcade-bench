@@ -429,6 +429,7 @@ export async function getArcade(): Promise<ArcadeEntry[]> {
     select: {
       id: true,
       artifactPath: true,
+      tokensOut: true,
       game: { select: GAME_SELECT },
       model: { select: MODEL_SELECT },
       playabilityVotes: { select: { playable: true } },
@@ -446,6 +447,7 @@ export async function getArcade(): Promise<ArcadeEntry[]> {
       model: toModelView(g.model),
       playablePct,
       votes: g.playabilityVotes.length,
+      tokensOut: g.tokensOut,
     });
   }
 

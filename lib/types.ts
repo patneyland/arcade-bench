@@ -116,6 +116,9 @@ export interface ArcadeEntry {
   model: ModelView;
   playablePct: number; // 0–100
   votes: number;
+  // Tokens the model spent writing this exact build (Generation.tokensOut) —
+  // shown on the arcade thumbnail's coin gate next to the param count.
+  tokensOut: number;
 }
 
 /** One build in the signed-in testing queue — model hidden until the vote. */
