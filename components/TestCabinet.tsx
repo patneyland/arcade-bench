@@ -18,7 +18,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import type { GameView, TestCandidate } from "@/lib/types";
+import { LOCKED_PROMPT } from "@/lib/constants";
 import { SandboxedPlayer } from "./SandboxedPlayer";
+import { PromptTab } from "./PromptTab";
 import { TestVerdict } from "./TestVerdict";
 import { ButtonLink } from "./Button";
 
@@ -125,6 +127,10 @@ export function TestCabinet({
             />
           </div>
         </div>
+
+        {/* The prompt never names the model, so showing it doesn't break the
+            pre-verdict anonymity rule. */}
+        <PromptTab prompt={game.prompt ?? LOCKED_PROMPT(game.title)} />
 
         {/* CTA row: slim, sticky at the bottom on phones. Restart lives in the
             player's own overlay chip — no extra controls here. */}

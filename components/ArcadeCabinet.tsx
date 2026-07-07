@@ -4,7 +4,9 @@
 // INSERT COIN gate intact — playing is always free and zero-auth.
 
 import type { ArcadeEntry } from "@/lib/types";
+import { LOCKED_PROMPT } from "@/lib/constants";
 import { SandboxedPlayer } from "./SandboxedPlayer";
+import { PromptTab } from "./PromptTab";
 import { CostChip, VendorBadge } from "./Badges";
 
 export function ArcadeCabinet({
@@ -34,6 +36,8 @@ export function ArcadeCabinet({
           title={`${game.title} — ${model.name}`}
         />
       </div>
+
+      <PromptTab prompt={game.prompt ?? LOCKED_PROMPT(game.title)} />
 
       {/* Identity + certification strip. */}
       <div className="flex flex-wrap items-center gap-2 border-t-2 border-ink bg-cream-2 px-4 py-3">
