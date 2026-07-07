@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frogger</title>
+<style>
+  body {
+    margin: 0;
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+  }
+  h1 {
+    color: #4ade80;
+    text-shadow: 2px 2px #166534;
+    margin-bottom: 5px;
+  }
+  #game {
+    border: 4px solid #4ade80;
+    background: #000;
+    box-shadow: 0 0 20px #4ade80;
+  }
+  #info {
+    display: flex;
+    gap: 40px;
+    margin: 10px;
+    font-size: 20px;
+  }
+  #controls {
+    font-size: 14px;
+    color: #94a3b8;
+    margin-top: 5px;
+  }
+  .highlight { color: #fbbf24; }
+</style>
+</head>
+<body>
+  <h1>🐸 FROGGER 🐸</h1>
+  <div id="info">
+    <div>Score: <span id="score" class="highlight">0</span></div>
+    <div>Lives: <span id="lives" class="highlight">3</span></div>
+    <div>Level: <span id="level" class="highlight">1</span></div>
+  </div>
+  <canvas id="game" width="600" height="660"></canvas>
+  <div id="controls">Use ARROW KEYS or WASD to move • Reach all 5 lily pads!</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const GRID = 60;
+const COLS = 10;
+const ROWS = 11;
+
+let score = 0;
+let lives = 3;
+let level = 1;
+let gameOver = false;
+let won = false;
+
+// Frog
+const frog = {
+  x: 4 * GRID,
+  y: 10 * GRID,
+  size: GRID,
+  onLog: null
+};
+
+function resetFrog() {
+  frog.x = 4 * GRID;
+  frog.y = 10 * GRID;
+  frog.onLog = null;
+}
+
+// Lanes: type 'car' (road), 'log' (water)
+// Rows from top: 0 = home (lily pads), 1-5 = water, 6 = safe, 7-11 = road/start
+let lanes = [];
+
+function setupLanes() {
+  const speedMult = 1 + (level - 1) * 0.3;
+  lanes = [
+    // Water lanes (logs/turtles) rows 1-5
+    { row: 1, type: 'log', dir: 1,  speed: 1.5 * speedMult, count: 3, len: 3, gap: 3, color: '#8b5a2b' },
+    { row: 2, type: 'log', dir: -1, speed: 2.0 * speedMult, count: 3, len: 2, gap: 3, color: '#a0522d' },
+    { row: 3, type: 'log', dir: 1,  speed: 1.0 * speedMult, count: 2, len: 4, gap: 5, color: '#8b5a2b' },
+    { row: 4, type: 'log', dir: -1, speed: 2.5 * speedMult, count: 4, len: 2, gap: 2, color: '#a0522d' },
+    { row: 5, type: 'log', dir: 1,  speed: 1.8 * speedMult, count: 3, len: 3, gap: 3, color: '#8b5a2b' },
+    // Road lanes (cars) rows 7-10
+    { row: 7,  type: 'car', dir: -1, speed: 2.0 * speedMult, count: 3, len: 1, gap: 3, color: '#ef4444' },
+    { row: 8,  type: 'car', dir: 1,  speed: 3.0 * speedMult, count: 2, len: 1, gap: 5, color: '#3b82f6' },
+    { row: 9,  type: 'car', dir: -1, speed: 1.5 * speedMult, count: 3, len: 2, gap: 3, color: '#eab308' },
+    { row: 10, type: 'car', dir: 1,  speed: 2.5 * speedMult, count: 3, len: 1, gap: 3, color: '#a855f7' },
+  ];
+  // Build obstacle objects
+  for (const lane of lanes) {
+    lane.obstacles = [];
+    const spacing = (lane.len + lane.gap) * GRID;
+    for (let i = 0; i < lane.count; i++) {
+      lane.obstacles.push({
+        x: i * spacing,
+        w: lane.len * GRID
+      });
+    }
+    lane.totalWidth = lane.count * spacing;
+  }
+}
+
+// Lily pads (homes)
+let homes = [];
+function setupHomes() {
+  homes = [];
+  for (let i = 0; i < 5; i++) {
+    homes.push({ x: (i * 2 + 0.5) * GRID, filled: false });
+  }
+}
+
+setupLanes();
+setupHomes();
+
+// Input
+document.addEventListener('keydown', (e) => {
+  if (gameOver) {
+    if (e.key === ' ' || e.key === 'Enter') restartGame();
+    return;
+  }
+  let moved = false;
+  switch (e.key) {
+    case 'ArrowUp': case 'w': case 'W':
+      if (frog.y > 0) { frog.y -= GRID; moved = true; } break;
+    case 'ArrowDown': case 's': case 'S':
+      if (frog.y < 10 * GRID) { frog.y += GRID; moved = true; } break;
+    case 'ArrowLeft': case 'a': case 'A':
+      if (frog.x > 0) { frog.x -= GRID; moved = true; } break;
+    case 'ArrowRight': case 'd': case 'D':
+      if (frog.x < 9 * GRID) { frog.x += GRID; moved = true; } break;
+  }
+  if (moved) {
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key))
+      e.preventDefault();
+    if (frog.y === 0) checkHome();
+  }
+});
+
+function checkHome() {
+  const frogCenter = frog.x + GRID / 2;
+  for (const home of homes) {
+    const homeCenter = home.x + GRID / 2;
+    if (!home.filled && Math.abs(frogCenter - homeCenter) < GRID * 0.6) {
+      home.filled = true;
+      score += 100;
+      resetFrog();
+      // Check win
+      if (homes.every(h => h.filled)) {
+        levelUp();
+      }
+      return;
+    }
+  }
+  // Missed a home - die
+  loseLife();
+}
+
+function levelUp() {
+  level++;
+  score += 500;
+  setupHomes();
+  setupLanes();
+  resetFrog();
+}
+
+function loseLife() {
+  lives--;
+  if (lives <= 0) {
+    gameOver = true;
+    won = false;
+  } else {
+    resetFrog();
+  }
+}
+
+function restartGame() {
+  score = 0;
+  lives = 3;
+  level = 1;
+  gameOver = false;
+  setupHomes();
+  setupLanes();
+  resetFrog();
+}
+
+function update() {
+  if (gameOver) return;
+
+  const frogRow = Math.round(frog.y / GRID);
+  frog.onLog = null;
+
+  for (const lane of lanes) {
+    for (const ob of lane.obstacles) {
+      ob.x += lane.dir * lane.speed;
+      // Wrap around
+      if (lane.dir === 1 && ob.x > canvas.width) {
+        ob.x -= lane.totalWidth;
+      } else if (lane.dir === -1 && ob.x + ob.w < 0) {
+        ob.x += lane.totalWidth;
+      }
+    }
+
+    if (lane.row === frogRow) {
+      const frogLeft = frog.x + 10;
+      const frogRight = frog.x + GRID - 10;
+      for (const ob of lane.obstacles) {
+        const overlap = frogRight > ob.x && frogLeft < ob.x + ob.w;
+        if (lane.type === 'car') {
+          if (overlap) { loseLife(); return; }
+        } else if (lane.type === 'log') {
+          if (overlap) { frog.onLog = lane; }
+        }
+      }
+    }
+  }
+
+  // Water rows (1-5): if not on a log, drown
+  if (frogRow >= 1 && frogRow <= 5) {
+    if (!frog.onLog) {
+      loseLife();
+      return;
+    } else {
+      // Move with log
+      frog.x += frog.onLog.dir * frog.onLog.speed;
+      if (frog.x < 0 || frog.x > 9 * GRID) {
+        loseLife();
+        return;
+      }
+    }
+  }
+}
+
+function drawFrog(x, y) {
+  const cx = x + GRID/2, cy = y + GRID/2;
+  ctx.fillStyle = '#22c55e';
+  // body
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, GRID*0.32, GRID*0.28, 0, 0, Math.PI*2);
+  ctx.fill();
+  // legs
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath();
+  ctx.ellipse(cx - GRID*0.28, cy - GRID*0.22, GRID*0.12, GRID*0.18, 0.5, 0, Math.PI*2);
+  ctx.ellipse(cx + GRID*0.28, cy - GRID*0.22, GRID*0.12, GRID*0.18, -0.5, 0, Math.PI*2);
+  ctx.ellipse(cx - GRID*0.28, cy + GRID*0.22, GRID*0.12, GRID*0.18, -0.5, 0, Math.PI*2);
+  ctx.ellipse(cx + GRID*0.28, cy + GRID*0.22, GRID*0.12, GRID*0.18, 0.5, 0, Math.PI*2);
+  ctx.fill();
+  // eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(cx - GRID*0.13, cy - GRID*0.18, GRID*0.09, 0, Math.PI*2);
+  ctx.arc(cx + GRID*0.13, cy - GRID*0.18, GRID*0.09, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(cx - GRID*0.13, cy - GRID*0.18, GRID*0.04, 0, Math.PI*2);
+  ctx.arc(cx + GRID*0.13, cy - GRID*0.18, GRID*0.04, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function draw() {
+  // Background zones
+  // Home row
+  ctx.fillStyle = '#065f46';
+  ctx.fillRect(0, 0, canvas.width, GRID);
+  // Water
+  ctx.fillStyle = '#1e3a8a';
+  ctx.fillRect(0, GRID, canvas.width, 5 * GRID);
+  // Safe middle
+  ctx.fillStyle = '#4d7c0f';
+  ctx.fillRect(0, 6 * GRID, canvas.width, GRID);
+  // Road
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(0, 7 * GRID, canvas.width, 4 * GRID);
+  // Start row
+  ctx.fillStyle = '#4d7c0f';
+  ctx.fillRect(0, 10 * GRID, canvas.width, GRID);
+
+  // Road lane markings
+  ctx.strokeStyle = '#fbbf24';
+  ctx.setLineDash([20, 20]);
+  ctx.lineWidth = 2;
+  for (let r = 8; r <= 10; r++) {
+    ctx.beginPath();
+    ctx.moveTo(0, r * GRID);
+    ctx.lineTo(canvas.width, r * GRID);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Lily pads
+  for (const home of homes) {
+    ctx.fillStyle = '#166534';
+    ctx.beginPath();
+    ctx.arc(home.x + GRID/2, GRID/2, GRID*0.35, 0, Math.PI*2);
+    ctx.fill();
+    if (home.filled) {
+      drawFrog(home.x, 0);
+    }
+  }
+
+  // Obstacles
+  for (const lane of lanes) {
+    for (const ob of lane.obstacles) {
+      const y = lane.row * GRID;
+      if (lane.type === 'log') {
+        ctx.fillStyle = lane.color;
+        ctx.fillRect(ob.x, y + 8, ob.w, GRID - 16);
+        // wood lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 2;
+        for (let i = GRID; i < ob.w; i += GRID) {
+          ctx.beginPath();
+          ctx.moveTo(ob.x + i, y + 8);
+          ctx.lineTo(ob.x + i, y + GRID - 8);
+          ctx.stroke();
+        }
+      } else {
+        // car
+        ctx.fillStyle = lane.color;
+        ctx.fillRect(ob.x + 4, y + 10, ob.w - 8, GRID - 20);
+        // windows
+        ctx.fillStyle = 'rgba(200,230,255,0.7)';
+        ctx.fillRect(ob.x + ob.w * 0.3, y + 14, ob.w * 0.4, GRID - 28);
+        // wheels
+        ctx.fillStyle = '#111';
+        ctx.fillRect(ob.x + 6, y + 6, 10, 6);
+        ctx.fillRect(ob.x + ob.w - 16, y + 6, 10, 6);
+        ctx.fillRect(ob.x + 6, y + GRID - 12, 10, 6);
+        ctx.fillRect(ob.x + ob.w - 16, y + GRID - 12, 10, 6);
+      }
+    }
+  }
+
+  // Frog
+  if (!gameOver) drawFrog(frog.x, frog.y);
+
+  // Game over overlay
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 50px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px Courier New';
+    ctx.fillText('Score: ' + score, canvas.width/2, canvas.height/2 + 25);
+    ctx.fillStyle = '#4ade80';
+    ctx.font = '18px Courier New';
+    ctx.fillText('Press SPACE to play again', canvas.width/2, canvas.height/2 + 65);
+    ctx.textAlign = 'left';
+  }
+
+  // Update HUD
+  document.getElementById('score').textContent = score;
+  document.getElementById('lives').textContent = lives;
+  document.getElementById('level').textContent = level;
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

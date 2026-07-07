@@ -58,5 +58,13 @@
     "openrouterId": "google/gemini-3.1-pro-preview",
     "promptPriceUsd": 0.000002,
     "completionPriceUsd": 0.000012
+  },
+  {
+    "slug": "glm-5-2",
+    "name": "GLM 5.2",
+    "vendor": "Z.ai",
+    "openrouterId": "z-ai/glm-5.2",
+    "promptPriceUsd": 0.00000091,
+    "completionPriceUsd": 0.00000286
   }
 ]

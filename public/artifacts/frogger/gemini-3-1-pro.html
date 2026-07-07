@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML5 Frogger</title>
+    <style>
+        body {
+            background-color: #222;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            background-color: #000;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border: 4px solid #555;
+        }
+        #instructions {
+            margin-top: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>FROGGER</h2>
+    <canvas id="gameCanvas" width="520" height="560"></canvas>
+    <div id="instructions">Use <b>Arrow Keys</b> to move.<br>Get 5 frogs to the top lily pads!</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game Constants
+        const grid = 40;
+        const rows = 14;
+        const cols = 13;
+        const frogSize = 30;
+
+        // Game State Variables
+        let score = 0;
+        let lives = 3;
+        let gameOver = false;
+        let win = false;
+        let goals = [false, false, false, false, false]; 
+        
+        // Entites
+        let obstacles = [];
+        let frog;
+
+        // Reset the frog to the starting position
+        function resetFrog() {
+            frog = {
+                x: 6 * grid + (grid - frogSize) / 2, // Center in grid
+                y: 13 * grid + (grid - frogSize) / 2,
+                width: frogSize,
+                height: frogSize
+            };
+        }
+
+        // Initialize the game
+        function init() {
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            win = false;
+            goals = [false, false, false, false, false];
+            resetFrog();
+            obstacles = [];
+
+            // Road Lanes (Cars & Trucks) - Bottom Half
+            // Lane 1 (Bottom)
+            createObstacles(12, 'car', 2, 40, 1.5, '#FF3333');
+            // Lane 2
+            createObstacles(11, 'car', 3, 40, -1.2, '#FFFF33');
+            // Lane 3
+            createObstacles(10, 'car', 2, 40, 2.0, '#FF33FF');
+            // Lane 4
+            createObstacles(9, 'car', 1, 80, -2.5, '#FFFFFF'); // Truck
+            // Lane 5
+            createObstacles(8, 'car', 3, 40, 1.0, '#33FFFF');
+
+            // River Lanes (Logs & Turtles) - Top Half
+            // Lane 1 (Bottom of river)
+            createObstacles(6, 'log', 3, 120, -1.2, '#8B4513');
+            // Lane 2
+            createObstacles(5, 'log', 2, 160, 1.6, '#A0522D');
+            // Lane 3
+            createObstacles(4, 'log', 3, 80, -2.0, '#CD853F');
+            // Lane 4
+            createObstacles(3, 'log', 2, 120, 1.0, '#8B4513');
+            // Lane 5 (Top of river)
+            createObstacles(2, 'log', 2, 160, -1.5, '#A0522D');
+        }
+
+        // Helper to spawn obstacles in a row
+        function createObstacles(row, type, count, width, speed, color) {
+            let spacing = (canvas.width / count);
+            for (let i = 0; i < count; i++) {
+                obstacles.push({
+                    x: i * spacing,
+                    y: row * grid,
+                    width: width,
+                    height: grid,
+                    speed: speed,
+                    type: type,
+                    color: color
+                });
+            }
+        }
+
+        // Rectangular collision detection
+        function rectIntersect(r1, r2) {
+            return !(r2.x > r1.x + r1.width || 
+                     r2.x + r2.width < r1.x || 
+                     r2.y > r1.y + r1.height || 
+                     r2.y + r2.height < r1.y);
+        }
+
+        function handleDeath() {
+            lives--;
+            if (lives <= 0) {
+                gameOver = true;
+            } else {
+                resetFrog();
+            }
+        }
+
+        // Main Update Loop
+        function update() {
+            if (gameOver || win) return;
+
+            // Move obstacles
+            for (let obs of obstacles) {
+                obs.x += obs.speed;
+                // Screen wrapping
+                if (obs.speed > 0 && obs.x > canvas.width) {
+                    obs.x = -obs.width;
+                } else if (obs.speed < 0 && obs.x + obs.width < 0) {
+                    obs.x = canvas.width;
+                }
+            }
+
+            let safe = false;
+            let onLog = false;
+            let logSpeed = 0;
+
+            // Check collisions
+            for (let obs of obstacles) {
+                if (rectIntersect(frog, obs)) {
+                    if (obs.type === 'car') {
+                        handleDeath();
+                        return;
+                    } else if (obs.type === 'log') {
+                        onLog = true;
+                        logSpeed = obs.speed;
+                    }
+                }
+            }
+
+            // River logic (Rows 2 to 6)
+            let frogRow = Math.floor(frog.y / grid);
+            if (frogRow >= 2 && frogRow <= 6) {
+                if (!onLog) {
+                    handleDeath(); // Drowned
+                    return;
+                } else {
+                    frog.x += logSpeed; // Move with the log
+                }
+            }
+
+            // Keep frog within horizontal bounds
+            if (frog.x < 0) frog.x = 0;
+            if (frog.x + frog.width > canvas.width) frog.x = canvas.width - frog.width;
+
+            // Goal logic (Top Row)
+            if (frogRow === 1) {
+                // Goals are positioned roughly at columns 1, 3, 6, 8, 11
+                let centerTarget = frog.x + frog.width / 2;
+                let hitGoal = false;
+                
+                for (let i = 0; i < 5; i++) {
+                    let goalX = grid + (i * 2.5 * grid); // Calculate goal center layout
+                    // If frog is within the goal boundaries
+                    if (centerTarget > goalX && centerTarget < goalX + grid) {
+                        if (!goals[i]) {
+                            goals[i] = true;
+                            score += 50;
+                            hitGoal = true;
+                            
+                            // Check win condition
+                            if (goals.every(g => g === true)) {
+                                score += 1000;
+                                win = true;
+                            } else {
+                                resetFrog();
+                            }
+                        }
+                    }
+                }
+                
+                if (!hitGoal) {
+                    // Hit the wall between goals
+                    frog.y += grid; // Bounce back
+                }
+            }
+        }
+
+        // Main Draw Loop
+        function draw() {
+            // 1. Draw Background
+            // Safe zone bottom
+            ctx.fillStyle = '#444';
+            ctx.fillRect(0, 13 * grid, canvas.width, grid);
+            
+            // Road
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 8 * grid, canvas.width, 5 * grid);
+            
+            // Safe zone middle
+            ctx.fillStyle = '#472';
+            ctx.fillRect(0, 7 * grid, canvas.width, grid);
+            
+            // River
+            ctx.fillStyle = '#1A5276';
+            ctx.fillRect(0, 2 * grid, canvas.width, 5 * grid);
+            
+            // Goal background
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, grid, canvas.width, grid);
+
+            // Draw Goals
+            for (let i = 0; i < 5; i++) {
+                let goalX = grid + (i * 2.5 * grid);
+                ctx.fillStyle = goals[i] ? '#32CD32' : '#2874A6';
+                ctx.beginPath();
+                ctx.arc(goalX + grid/2, 1.5 * grid, grid/2 - 4, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // Top Status bar
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, grid);
+
+            // 2. Draw Obstacles
+            for (let obs of obstacles) {
+                ctx.fillStyle = obs.color;
+                if (obs.type === 'car') {
+                    // Slight padding to make lanes visible
+                    ctx.fillRect(obs.x, obs.y + 4, obs.width, obs.height - 8);
+                } else {
+                    ctx.fillRect(obs.x, obs.y + 2, obs.width, obs.height - 4);
+                }
+            }
+
+            // 3. Draw Frog
+            if (!gameOver && !win) {
+                ctx.fillStyle = '#32CD32';
+                ctx.fillRect(frog.x, frog.y, frog.width, frog.height);
+                // Frog Eyes
+                ctx.fillStyle = 'white';
+                ctx.fillRect(frog.x + 4, frog.y + 4, 6, 6);
+                ctx.fillRect(frog.x + frog.width - 10, frog.y + 4, 6, 6);
+            }
+
+            // 4. Draw UI
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Courier New';
+            ctx.textAlign = 'left';
+            ctx.fillText('SCORE: ' + score, 10, 28);
+            
+            ctx.textAlign = 'right';
+            ctx.fillText('LIVES: ' + lives, canvas.width - 10, 28);
+
+            // Game Over / Win Screens
+            if (gameOver || win) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = win ? '#32CD32' : '#FF3333';
+                ctx.font = '40px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(win ? 'YOU WIN!' : 'GAME OVER', canvas.width/2, canvas.height/2);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = '20px Courier New';
+                ctx.fillText('Press SPACE to Restart', canvas.width/2, canvas.height/2 + 40);
+            }
+        }
+
+        // Game Loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Input Handling
+        window.addEventListener('keydown', function(e) {
+            if (gameOver || win) {
+                if (e.code === 'Space') {
+                    init();
+                }
+                return;
+            }
+
+            // Prevent default scrolling for arrow keys
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight", "Space"].indexOf(e.code) > -1) {
+                e.preventDefault();
+            }
+
+            let moveAmount = grid;
+
+            switch(e.code) {
+                case 'ArrowUp':
+                    if (frog.y > grid) frog.y -= moveAmount;
+                    break;
+                case 'ArrowDown':
+                    if (frog.y < 13 * grid) frog.y += moveAmount;
+                    break;
+                case 'ArrowLeft':
+                    if (frog.x > 0) frog.x -= moveAmount;
+                    break;
+                case 'ArrowRight':
+                    if (frog.x < canvas.width - frog.width) frog.x += moveAmount;
+                    break;
+            }
+        });
+
+        // Start Game
+        init();
+        gameLoop();
+
+    </script>
+</body>
+</html>

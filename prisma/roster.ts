@@ -31,6 +31,7 @@ export const MODELS: ModelSeed[] = [
   { slug: "claude-opus-4-8", name: "Claude Opus 4.8", vendor: "Anthropic", paramSize: null, openrouterId: "anthropic/claude-opus-4.8", inPer1M: 5, outPer1M: 25, tier: "heavyweight" },
   { slug: "gpt-5-5", name: "GPT-5.5", vendor: "OpenAI", paramSize: null, openrouterId: "openai/gpt-5.5", inPer1M: 5, outPer1M: 30, tier: "heavyweight" },
   { slug: "gemini-3-1-pro", name: "Gemini 3.1 Pro", vendor: "Google", paramSize: null, openrouterId: "google/gemini-3.1-pro-preview", inPer1M: 2, outPer1M: 12, tier: "heavyweight" },
+  { slug: "glm-5-2", name: "GLM 5.2", vendor: "Z.ai", paramSize: null, openrouterId: "z-ai/glm-5.2", inPer1M: 0.91, outPer1M: 2.86, tier: "heavyweight" },
 ];
 
 export interface GameSeed {
@@ -46,8 +47,12 @@ export const GAMES: GameSeed[] = [
   { slug: "pong", title: "Pong", year: 1972, creator: "Atari", roundOrder: 1, status: "live" },
   { slug: "snake", title: "Snake", year: 1976, creator: "Gremlin", roundOrder: 2, status: "live" },
   { slug: "breakout", title: "Breakout", year: 1976, creator: "Atari", roundOrder: 3, status: "live" },
-  { slug: "space-invaders", title: "Space Invaders", year: 1978, creator: "Taito", roundOrder: 4, status: "now" },
-  { slug: "asteroids", title: "Asteroids", year: 1979, creator: "Atari", roundOrder: 5, status: "now" },
+  { slug: "space-invaders", title: "Space Invaders", year: 1978, creator: "Taito", roundOrder: 4, status: "live" },
+  { slug: "asteroids", title: "Asteroids", year: 1979, creator: "Atari", roundOrder: 5, status: "live" },
+  { slug: "pac-man", title: "Pac-Man", year: 1980, creator: "Namco", roundOrder: 6, status: "now" },
+  { slug: "missile-command", title: "Missile Command", year: 1980, creator: "Atari", roundOrder: 7, status: "now" },
+  { slug: "frogger", title: "Frogger", year: 1981, creator: "Konami", roundOrder: 8, status: "now" },
+  { slug: "tetris", title: "Tetris", year: 1985, creator: "Alexey Pajitnov", roundOrder: 9, status: "now" },
 ];
 
 /** Modeled tokens for a typical generation (used for costPerGen estimates). */

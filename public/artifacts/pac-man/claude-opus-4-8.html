@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pac-Man</title>
+<style>
+    body {
+        margin: 0;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        font-family: 'Courier New', monospace;
+        color: #fff;
+    }
+    h1 {
+        color: #ffcc00;
+        text-shadow: 2px 2px #ff0000;
+        margin: 10px;
+    }
+    #game {
+        border: 2px solid #1919a6;
+        background: #000;
+    }
+    #info {
+        display: flex;
+        gap: 40px;
+        margin: 10px;
+        font-size: 20px;
+    }
+    #overlay {
+        position: absolute;
+        color: #ffcc00;
+        font-size: 40px;
+        text-align: center;
+        display: none;
+    }
+    .controls {
+        font-size: 14px;
+        color: #888;
+        margin-top: 10px;
+    }
+</style>
+</head>
+<body>
+    <h1>PAC-MAN</h1>
+    <div id="info">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>LIVES: <span id="lives">3</span></div>
+        <div>HIGH: <span id="high">0</span></div>
+    </div>
+    <canvas id="game"></canvas>
+    <div id="overlay"></div>
+    <div class="controls">Use Arrow Keys or WASD to move</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Map legend: 1=wall, 0=dot, 2=power pellet, 3=empty, 4=ghost house, 5=gate
+const map = [
+    "1111111111111111111111111111",
+    "1000000000000110000000000001",
+    "1011110111110110111110111101",
+    "1211110111110110111110111121",
+    "1011110111110110111110111101",
+    "1000000000000000000000000001",
+    "1011110110111111110110111101",
+    "1011110110111111110110111101",
+    "1000000110000110000110000001",
+    "1111110111110110111110111111",
+    "3333310111110110111110133333",
+    "3333310110000000000110133333",
+    "3333310110113553110110133333",
+    "1111110110143333410110111111",
+    "3000000000143333410000000003",
+    "1111110110143333410110111111",
+    "3333310110144444410110133333",
+    "3333310110000000000110133333",
+    "3333310110111111110110133333",
+    "1111110110111111110110111111",
+    "1000000000000110000000000001",
+    "1011110111110110111110111101",
+    "1011110111110110111110111101",
+    "1200110000000000000000110021",
+    "1110110110111111110110110111",
+    "1110110110111111110110110111",
+    "1000000110000110000110000001",
+    "1011111111110110111111111101",
+    "1011111111110110111111111101",
+    "1000000000000000000000000001",
+    "1111111111111111111111111111"
+];
+
+const ROWS = map.length;
+const COLS = map[0].length;
+const TILE = 20;
+
+canvas.width = COLS * TILE;
+canvas.height = ROWS * TILE;
+
+// Build grid copy for dots
+let grid = map.map(row => row.split(''));
+
+let score = 0;
+let lives = 3;
+let highScore = 0;
+let gameState = 'playing'; // playing, dead, win, gameover
+let dotCount = 0;
+
+// Count initial dots
+function countDots() {
+    let count = 0;
+    for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+            if (grid[r][c] === '0' || grid[r][c] === '2') count++;
+    return count;
+}
+
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const highEl = document.getElementById('high');
+const overlay = document.getElementById('overlay');
+
+// Pac-Man
+const pacman = {
+    x: 14, y: 23,
+    dir: {x: 0, y: 0},
+    nextDir: {x: 0, y: 0},
+    px: 14 * TILE, py: 23 * TILE,
+    speed: 2,
+    mouth: 0,
+    mouthDir: 1
+};
+
+// Ghosts
+function makeGhost(x, y, color, scatterX, scatterY) {
+    return {
+        x, y,
+        px: x * TILE, py: y * TILE,
+        dir: {x: 0, y: -1},
+        color,
+        scatterX, scatterY,
+        speed: 1.8,
+        frightened: false,
+        eaten: false,
+        inHouse: true,
+        releaseTime: 0
+    };
+}
+
+let ghosts = [];
+let frightenedTimer = 0;
+let mode = 'scatter';
+let modeTimer = 0;
+
+function initGhosts() {
+    ghosts = [
+        makeGhost(14, 14, '#ff0000', COLS-2, 0),      // Blinky (red)
+        makeGhost(13, 14, '#ffb8ff', 2, 0),           // Pinky
+        makeGhost(14, 16, '#00ffff', COLS-2, ROWS-1), // Inky
+        makeGhost(15, 16, '#ffb852', 2, ROWS-1)       // Clyde
+    ];
+    ghosts[0].inHouse = false;
+    ghosts[0].y = 11; ghosts[0].py = 11 * TILE;
+    ghosts[0].x = 14; ghosts[0].px = 14 * TILE;
+    ghosts[1].releaseTime = 60;
+    ghosts[2].releaseTime = 180;
+    ghosts[3].releaseTime = 360;
+}
+
+function isWall(x, y) {
+    if (y < 0 || y >= ROWS) return false;
+    // Wrap around horizontally
+    if (x < 0) x = COLS - 1;
+    if (x >= COLS) x = 0;
+    const cell = grid[y][x];
+    return cell === '1';
+}
+
+function isWallGhost(x, y, canPassGate) {
+    if (y < 0 || y >= ROWS) return false;
+    if (x < 0) x = COLS - 1;
+    if (x >= COLS) x = 0;
+    const cell = grid[y][x];
+    if (cell === '1') return true;
+    if (cell === '5' && !canPassGate) return true;
+    return false;
+}
+
+// Input
+const keys = {};
+document.addEventListener('keydown', e => {
+    switch(e.key) {
+        case 'ArrowUp': case 'w': case 'W': pacman.nextDir = {x:0,y:-1}; e.preventDefault(); break;
+        case 'ArrowDown': case 's': case 'S': pacman.nextDir = {x:0,y:1}; e.preventDefault(); break;
+        case 'ArrowLeft': case 'a': case 'A': pacman.nextDir = {x:-1,y:0}; e.preventDefault(); break;
+        case 'ArrowRight': case 'd': case 'D': pacman.nextDir = {x:1,y:0}; e.preventDefault(); break;
+        case ' ': if (gameState === 'gameover' || gameState === 'win') resetGame(); break;
+    }
+});
+
+function atCenter(entity) {
+    return (entity.px % TILE === 0) && (entity.py % TILE === 0);
+}
+
+function updatePacman() {
+    if (atCenter(pacman)) {
+        pacman.x = Math.round(pacman.px / TILE);
+        pacman.y = Math.round(pacman.py / TILE);
+
+        // Wrap tunnel
+        if (pacman.x < 0) { pacman.x = COLS - 1; pacman.px = pacman.x * TILE; }
+        if (pacman.x >= COLS) { pacman.x = 0; pacman.px = pacman.x * TILE; }
+
+        // Try to change to next direction
+        const nx = pacman.x + pacman.nextDir.x;
+        const ny = pacman.y + pacman.nextDir.y;
+        if (!isWall(nx, ny)) {
+            pacman.dir = {...pacman.nextDir};
+        }
+
+        // Check current direction
+        const cx = pacman.x + pacman.dir.x;
+        const cy = pacman.y + pacman.dir.y;
+        if (isWall(cx, cy)) {
+            pacman.dir = {x: 0, y: 0};
+        }
+
+        // Eat dots
+        const cell = grid[pacman.y][pacman.x];
+        if (cell === '0') {
+            grid[pacman.y][pacman.x] = '3';
+            score += 10;
+            dotCount--;
+        } else if (cell === '2') {
+            grid[pacman.y][pacman.x] = '3';
+            score += 50;
+            dotCount--;
+            frightenedTimer = 420;
+            ghosts.forEach(g => { if (!g.eaten) g.frightened = true; });
+        }
+        updateUI();
+
+        if (dotCount <= 0) {
+            gameState = 'win';
+        }
+    }
+
+    pacman.px += pacman.dir.x * pacman.speed;
+    pacman.py += pacman.dir.y * pacman.speed;
+
+    // Animate mouth
+    if (pacman.dir.x !== 0 || pacman.dir.y !== 0) {
+        pacman.mouth += pacman.mouthDir * 0.15;
+        if (pacman.mouth > 0.5 || pacman.mouth < 0) pacman.mouthDir *= -1;
+    }
+}
+
+function ghostTarget(ghost, index) {
+    if (ghost.eaten) {
+        return {x: 14, y: 14}; // back to house
+    }
+    if (ghost.frightened) {
+        return null; // random
+    }
+    if (mode === 'scatter') {
+        return {x: ghost.scatterX, y: ghost.scatterY};
+    }
+    // Chase mode
+    if (index === 0) { // Blinky - direct
+        return {x: pacman.x, y: pacman.y};
+    } else if (index === 1) { // Pinky - 4 ahead
+        return {x: pacman.x + pacman.dir.x * 4, y: pacman.y + pacman.dir.y * 4};
+    } else if (index === 2) { // Inky
+        const bx = ghosts[0].x, by = ghosts[0].y;
+        const tx = pacman.x + pacman.dir.x * 2;
+        const ty = pacman.y + pacman.dir.y * 2;
+        return {x: tx + (tx - bx), y: ty + (ty - by)};
+    } else { // Clyde
+        const dist = Math.hypot(ghost.x - pacman.x, ghost.y - pacman.y);
+        if (dist > 8) return {x: pacman.x, y: pacman.y};
+        return {x: ghost.scatterX, y: ghost.scatterY};
+    }
+}
+
+function updateGhost(ghost, index) {
+    let speed = ghost.speed;
+    if (ghost.frightened) speed = 1.2;
+    if (ghost.eaten) speed = 3;
+
+    // Release from house
+    if (ghost.inHouse) {
+        if (modeTimer > ghost.releaseTime) {
+            // Move to exit
+            const targetY = 11;
+            if (Math.abs(ghost.px - 14 * TILE) > 1) {
+                ghost.px += ghost.px < 14 * TILE ? 1 : -1;
+                ghost.x = Math.round(ghost.px / TILE);
+            } else {
+                ghost.px = 14 * TILE;
+                ghost.x = 14;
+                if (ghost.py > targetY * TILE) {
+                    ghost.py -= 1;
+                    ghost.y = Math.round(ghost.py / TILE);
+                } else {
+                    ghost.inHouse = false;
+                    ghost.dir = {x: -1, y: 0};
+                }
+            }
+        }
+        return;
+    }
+
+    if (atCenter(ghost)) {
+        ghost.x = Math.round(ghost.px / TILE);
+        ghost.y = Math.round(ghost.py / TILE);
+
+        // Wrap tunnel
+        if (ghost.x < 0) { ghost.x = COLS - 1; ghost.px = ghost.x * TILE; }
+        if (ghost.x >= COLS) { ghost.x = 0; ghost.px = ghost.x * TILE; }
+
+        // Return to house if eaten and arrived
+        if (ghost.eaten && ghost.x === 14 && (ghost.y === 14 || ghost.y === 13)) {
+            ghost.eaten = false;
+            ghost.frightened = false;
+            ghost.inHouse = true;
+            ghost.releaseTime = modeTimer + 30;
+            ghost.py = 14 * TILE;
+            ghost.y = 14;
+            return;
+        }
+
+        const canPassGate = ghost.eaten;
+        // Choose direction at intersection
+        const dirs = [
+            {x: 0, y: -1}, {x: -1, y: 0}, {x: 0, y: 1}, {x: 1, y: 0}
+        ];
+        const target = ghostTarget(ghost, index);
+        let best = null, bestDist = Infinity;
+        let options = [];
+
+        for (const d of dirs) {
+            // Can't reverse
+            if (d.x === -ghost.dir.x && d.y === -ghost.dir.y) continue;
+            const nx = ghost.x + d.x;
+            const ny = ghost.y + d.y;
+            if (!isWallGhost(nx, ny, canPassGate)) {
+                options.push(d);
+                if (target) {
+                    let wx = nx; if (wx < 0) wx = COLS-1; if (wx >= COLS) wx = 0;
+                    const dist = Math.hypot(wx - target.x, ny - target.y);
+                    if (dist < bestDist) { bestDist = dist; best = d; }
+                }
+            }
+        }
+
+        if (options.length === 0) {
+            ghost.dir = {x: -ghost.dir.x, y: -ghost.dir.y};
+        } else if (ghost.frightened && !target) {
+            ghost.dir = options[Math.floor(Math.random() * options.length)];
+        } else {
+            ghost.dir = best || options[0];
+        }
+    }
+
+    ghost.px += ghost.dir.x * speed;
+    ghost.py += ghost.dir.y * speed;
+}
+
+function checkCollisions() {
+    for (let i = 0; i < ghosts.length; i++) {
+        const g = ghosts[i];
+        if (g.inHouse || g.eaten) continue;
+        const dist = Math.hypot(g.px - pacman.px, g.py - pacman.py);
+        if (dist < TILE * 0.7) {
+            if (g.frightened) {
+                g.eaten = true;
+                g.frightened = false;
+                score += 200;
+                updateUI();
+            } else {
+                loseLife();
+                return;
+            }
+        }
+    }
+}
+
+function loseLife() {
+    lives--;
+    updateUI();
+    if (lives <= 0) {
+        gameState = 'gameover';
+        highScore = Math.max(highScore, score);
+        highEl.textContent = highScore;
+    } else {
+        gameState = 'dead';
+        setTimeout(resetPositions, 1000);
+    }
+}
+
+function resetPositions() {
+    pacman.x = 14; pacman.y = 23;
+    pacman.px = 14 * TILE; pacman.py = 23 * TILE;
+    pacman.dir = {x: 0, y: 0};
+    pacman.nextDir = {x: 0, y: 0};
+    initGhosts();
+    frightenedTimer = 0;
+    modeTimer = 0;
+    gameState = 'playing';
+}
+
+function resetGame() {
+    grid = map.map(row => row.split(''));
+    dotCount = countDots();
+    score = 0;
+    lives = 3;
+    resetPositions();
+    overlay.style.display = 'none';
+    updateUI();
+}
+
+function updateUI() {
+    scoreEl.textContent = score;
+    livesEl.textContent = lives;
+    highEl.textContent = Math.max(highScore, score);
+}
+
+// Drawing
+function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw maze
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            const cell = grid[r][c];
+            const x = c * TILE, y = r * TILE;
+            if (cell === '1') {
+                ctx.fillStyle = '#1919a6';
+                ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
+                ctx.fillStyle = '#2121de';
+                ctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+            } else if (cell === '5') {
+                ctx.fillStyle = '#ffb8ff';
+                ctx.fillRect(x + 2, y + TILE/2 - 1, TILE - 4, 2);
+            } else if (cell === '0') {
+                ctx.fillStyle = '#ffb897';
+                ctx.beginPath();
+                ctx.arc(x + TILE/2, y + TILE/2, 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (cell === '2') {
+                ctx.fillStyle = '#ffb897';
+                ctx.beginPath();
+                ctx.arc(x + TILE/2, y + TILE/2, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
+    // Draw Pac-Man
+    if (gameState !== 'dead') {
+        const cx = pacman.px + TILE/2;
+        const cy = pacman.py + TILE/2;
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath();
+        let angle = 0;
+        if (pacman.dir.x === 1) angle = 0;
+        else if (pacman.dir.x === -1) angle = Math.PI;
+        else if (pacman.dir.y === -1) angle = -Math.PI/2;
+        else if (pacman.dir.y === 1) angle = Math.PI/2;
+        const m = pacman.mouth * Math.PI;
+        ctx.arc(cx, cy, TILE/2 - 1, angle + m, angle - m + Math.PI * 2);
+        ctx.lineTo(cx, cy);
+        ctx.fill();
+    }
+
+    // Draw ghosts
+    ghosts.forEach(g => {
+        const cx = g.px + TILE/2;
+        const cy = g.py + TILE/2;
+        const rad = TILE/2 - 1;
+
+        let color = g.color;
+        if (g.eaten) {
+            color = null; // just eyes
+        } else if (g.frightened) {
+            color = frightenedTimer < 120 && Math.floor(frightenedTimer/15) % 2 === 0 ? '#fff' : '#2121de';
+        }
+
+        if (color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(cx, cy - 1, rad, Math.PI, 0);
+            ctx.lineTo(cx + rad, cy + rad);
+            // wavy bottom
+            const waves = 3;
+            for (let i = 0; i < waves; i++) {
+                const wx = cx + rad - (i * 2 + 1) * (rad / waves);
+                ctx.lineTo(wx, cy + rad - 3);
+                const wx2 = cx + rad - (i * 2 + 2) * (rad / waves);
+                ctx.lineTo(wx2, cy + rad);
+            }
+            ctx.lineTo(cx - rad, cy + rad);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Eyes
+        const eyeOffX = g.dir.x * 2;
+        const eyeOffY = g.dir.y * 2;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(cx - 3, cy - 2, 3, 0, Math.PI * 2);
+        ctx.arc(cx + 3, cy - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = g.frightened && !g.eaten ? '#000' : '#2121de';
+        ctx.beginPath();
+        ctx.arc(cx - 3 + eyeOffX, cy - 2 + eyeOffY, 1.5, 0, Math.PI * 2);
+        ctx.arc(cx + 3 + eyeOffX, cy - 2 + eyeOffY, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Overlays
+    if (gameState === 'gameover') {
+        overlay.style.display = 'block';
+        overlay.innerHTML = 'GAME OVER<br><span style="font-size:20px">Press SPACE to restart</span>';
+    } else if (gameState === 'win') {
+        overlay.style.display = 'block';
+        overlay.innerHTML = 'YOU WIN!<br><span style="font-size:20px">Press SPACE to play again</span>';
+    } else {
+        overlay.style.display = 'none';
+    }
+}
+
+function update() {
+    if (gameState !== 'playing') return;
+
+    modeTimer++;
+    // Mode switching (scatter/chase)
+    const cyclePos = modeTimer % 600;
+    mode = cyclePos < 200 ? 'scatter' : 'chase';
+
+    if (frightenedTimer > 0) {
+        frightenedTimer--;
+        if (frightenedTimer === 0) {
+            ghosts.forEach(g => g.frightened = false);
+        }
+    }
+
+    updatePacman();
+    ghosts.forEach((g, i) => updateGhost(g, i));
+    checkCollisions();
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// Start
+initGhosts();
+dotCount = countDots();
+updateUI();
+loop();
+</script>
+</body>
+</html>
