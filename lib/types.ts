@@ -56,6 +56,9 @@ export interface GameView {
   status: GameStatus;
   referenceMediaUrl: string | null;
   specMarkdown: string | null;
+  // The exact locked prompt sent to every model for this game (Game.prompt).
+  // Optional so hand-built fixtures keep compiling; the data layer always sets it.
+  prompt?: string;
 }
 
 /** Everything the Arena page needs to render one match. */

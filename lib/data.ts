@@ -66,6 +66,7 @@ type GameRow = {
   status: string;
   referenceMediaUrl: string | null;
   specMarkdown: string | null;
+  prompt: string;
 };
 
 function toGameView(g: GameRow): GameView {
@@ -79,6 +80,7 @@ function toGameView(g: GameRow): GameView {
     status: g.status as GameStatus,
     referenceMediaUrl: g.referenceMediaUrl,
     specMarkdown: g.specMarkdown,
+    prompt: g.prompt,
   };
 }
 
@@ -92,6 +94,7 @@ const GAME_SELECT = {
   status: true,
   referenceMediaUrl: true,
   specMarkdown: true,
+  prompt: true,
 } as const;
 
 const MODEL_SELECT = {
