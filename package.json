@@ -5,7 +5,7 @@
   "description": "A community-voted arena ranking cost-efficient AI models on how well they recreate classic games.",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && tsx scripts/sync-roster.ts && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:sync": "tsx scripts/sync-roster.ts",
     "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
     "setup": "prisma generate && prisma db push && tsx prisma/seed.ts"
   },

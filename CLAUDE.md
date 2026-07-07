@@ -19,9 +19,10 @@ generation prompt (explicitly deferred by the owner, repeatedly).
 
 ## Stack
 - **Next.js 15 (App Router) + React 19 + TypeScript**, Tailwind v3.
-- **Prisma + Postgres (Supabase)**. Local dev runs a local Supabase stack via Docker
-  (`npx supabase start`); production points `DATABASE_URL` at a hosted Supabase project.
-  Same schema either way. Supabase Studio (local): http://127.0.0.1:54323.
+- **Prisma + Postgres**. Local dev runs a local Supabase stack via Docker
+  (`npx supabase start`); production points `DATABASE_URL` at Railway Postgres
+  (the app deploys on Vercel; pushes to `main` auto-deploy). Same schema either way.
+  Supabase Studio (local): http://127.0.0.1:54323.
 - **Vitest** (+ jsdom, Testing Library) for the web app; the harness owns its own test run.
 - **Auth**: Clerk everywhere (dev instance with pk_test keys locally, production instance
   in prod). Abstracted in `lib/auth.ts`; votes are gated server-side in the vote API.
@@ -48,6 +49,26 @@ Self-contained HTML lives at `public/artifacts/<game-slug>/<model-slug>.html`.
 The seed references these paths in `Generation.artifactPath` (e.g.
 `/artifacts/pong/gemini-flash-lite.html`). The sandboxed player loads that path into a
 strict `sandbox` iframe (no same-origin, no network) — the one hard security rule.
+
+## Adding a new game (round) — ALWAYS follow this protocol
+A game only reaches the Test Lab / Arcade once its builds exist as PUBLISHED
+`Generation` rows in the database. Roster edits and artifacts alone do nothing —
+every new game MUST go through all of these steps:
+
+1. **Roster**: add the game to `GAMES` in `prisma/roster.ts` (slug, title, year,
+   creator, next `roundOrder`, status — usually `"now"`, demote previous rounds to `"live"`).
+2. **Harness**: run the harness for the new game (see `harness/`). It writes
+   `public/artifacts/<game-slug>/<model-slug>.html` AND appends to
+   `harness/out/manifest.json`. **Commit both** — the manifest is tracked in git
+   on purpose; it is the input the DB sync reads.
+3. **Local DB**: `npm run db:sync` (additive `scripts/sync-roster.ts`; safe with
+   real votes). Verify the game shows in the Test Lab picker at `/test`.
+4. **Production DB**: automatic — `npm run build` runs `db:sync` before
+   `next build`, so merging to `main` syncs the Railway prod DB during the Vercel
+   deploy. NEVER run `prisma/seed.ts` against production (it wipes votes and
+   refuses when real votes exist).
+
+Same protocol for new models (edit `MODELS` in `prisma/roster.ts`, then steps 2–4).
 
 ## Getting started
 ```

@@ -4,7 +4,7 @@ harness/node_modules/
 
 # next
 .next/
-out/
+/out/
 next-env.d.ts
 
 # prisma / db

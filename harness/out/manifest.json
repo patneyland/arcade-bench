@@ -1,0 +1,662 @@
+[
+  {
+    "modelSlug": "gemini-flash-lite",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/gemini-flash-lite.html",
+    "cost": 0.0009444,
+    "tokensIn": 16,
+    "tokensOut": 2357,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-4-1-nano",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/gpt-4-1-nano.html",
+    "cost": 0.0005042,
+    "tokensIn": 22,
+    "tokensOut": 1255,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "deepseek-v3",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/deepseek-v3.html",
+    "cost": 0.0018112297,
+    "tokensIn": 19,
+    "tokensOut": 2259,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "qwen3-8b",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/qwen3-8b.html",
+    "cost": 0.0030724,
+    "tokensIn": 24,
+    "tokensOut": 7678,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemma-3-4b",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/gemma-3-4b.html",
+    "cost": 0.00014575,
+    "tokensIn": 25,
+    "tokensOut": 1445,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "ministral-8b",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/ministral-8b.html",
+    "cost": 0.0002955,
+    "tokensIn": 20,
+    "tokensOut": 1950,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-flash-lite",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/gemini-flash-lite.html",
+    "cost": 0.0009336,
+    "tokensIn": 16,
+    "tokensOut": 2330,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-4-1-nano",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/gpt-4-1-nano.html",
+    "cost": 0.000403,
+    "tokensIn": 22,
+    "tokensOut": 1002,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "deepseek-v3",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/deepseek-v3.html",
+    "cost": 0.0013757751,
+    "tokensIn": 18,
+    "tokensOut": 1715,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "qwen3-8b",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/qwen3-8b.html",
+    "cost": 0.00253315,
+    "tokensIn": 23,
+    "tokensOut": 6330,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemma-3-4b",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/gemma-3-4b.html",
+    "cost": 0.00018425,
+    "tokensIn": 25,
+    "tokensOut": 1830,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "ministral-8b",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/ministral-8b.html",
+    "cost": 0.0005682,
+    "tokensIn": 19,
+    "tokensOut": 1875,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-flash-lite",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/gemini-flash-lite.html",
+    "cost": 0.0013313,
+    "tokensIn": 17,
+    "tokensOut": 3324,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-4-1-nano",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/gpt-4-1-nano.html",
+    "cost": 0.0005999,
+    "tokensIn": 23,
+    "tokensOut": 1494,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "deepseek-v3",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/deepseek-v3.html",
+    "cost": 0.0023304946,
+    "tokensIn": 19,
+    "tokensOut": 2908,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "qwen3-8b",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/qwen3-8b.html",
+    "cost": 0.003312,
+    "tokensIn": 24,
+    "tokensOut": 8277,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemma-3-4b",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/gemma-3-4b.html",
+    "cost": 0.0002022,
+    "tokensIn": 26,
+    "tokensOut": 2009,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "ministral-8b",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/ministral-8b.html",
+    "cost": 0.000414,
+    "tokensIn": 20,
+    "tokensOut": 2740,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/claude-opus-4-8.html",
+    "cost": 0.08605,
+    "tokensIn": 30,
+    "tokensOut": 3436,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/claude-opus-4-8.html",
+    "cost": 0.112855,
+    "tokensIn": 31,
+    "tokensOut": 4508,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/gpt-5-5.html",
+    "cost": 0.073065,
+    "tokensIn": 21,
+    "tokensOut": 2432,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/gpt-5-5.html",
+    "cost": 0.1313,
+    "tokensIn": 22,
+    "tokensOut": 4373,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/gemini-3-1-pro.html",
+    "cost": 0.056204,
+    "tokensIn": 16,
+    "tokensOut": 4681,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/gemini-3-1-pro.html",
+    "cost": 0.060754,
+    "tokensIn": 17,
+    "tokensOut": 5060,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/claude-opus-4-8.html",
+    "cost": 0.097275,
+    "tokensIn": 30,
+    "tokensOut": 3885,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/gpt-5-5.html",
+    "cost": 0.118575,
+    "tokensIn": 21,
+    "tokensOut": 3949,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/gemini-3-1-pro.html",
+    "cost": 0.052844,
+    "tokensIn": 16,
+    "tokensOut": 4401,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "gemini-flash-lite",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/gemini-flash-lite.html",
+    "cost": 0.0014322,
+    "tokensIn": 18,
+    "tokensOut": 3576,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-4-1-nano",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/gpt-4-1-nano.html",
+    "cost": 0.0005748,
+    "tokensIn": 24,
+    "tokensOut": 1431,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "deepseek-v3",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/deepseek-v3.html",
+    "cost": 0.0021690746,
+    "tokensIn": 20,
+    "tokensOut": 2706,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "qwen3-8b",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/qwen3-8b.html",
+    "cost": 0.0035542,
+    "tokensIn": 25,
+    "tokensOut": 7805,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemma-3-4b",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/gemma-3-4b.html",
+    "cost": 0.00023855,
+    "tokensIn": 27,
+    "tokensOut": 2372,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "ministral-8b",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/ministral-8b.html",
+    "cost": 0.0007857,
+    "tokensIn": 21,
+    "tokensOut": 2598,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/claude-opus-4-8.html",
+    "cost": 0.11999,
+    "tokensIn": 33,
+    "tokensOut": 4793,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/gpt-5-5.html",
+    "cost": 0.209095,
+    "tokensIn": 23,
+    "tokensOut": 6966,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/gemini-3-1-pro.html",
+    "cost": 0.07799,
+    "tokensIn": 19,
+    "tokensOut": 6496,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-flash-lite",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/gemini-flash-lite.html",
+    "cost": 0.0023777,
+    "tokensIn": 17,
+    "tokensOut": 5940,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-4-1-nano",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/gpt-4-1-nano.html",
+    "cost": 0.0009707,
+    "tokensIn": 23,
+    "tokensOut": 2421,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "deepseek-v3",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/deepseek-v3.html",
+    "cost": 0.00135621,
+    "tokensIn": 19,
+    "tokensOut": 1517,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "qwen3-8b",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/qwen3-8b.html",
+    "cost": 0.005944653,
+    "tokensIn": 24,
+    "tokensOut": 13059,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemma-3-4b",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/gemma-3-4b.html",
+    "cost": 0.0001838,
+    "tokensIn": 26,
+    "tokensOut": 1825,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "ministral-8b",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/ministral-8b.html",
+    "cost": 0.0004398,
+    "tokensIn": 20,
+    "tokensOut": 2912,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/claude-opus-4-8.html",
+    "cost": 0.13026,
+    "tokensIn": 32,
+    "tokensOut": 5204,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/gpt-5-5.html",
+    "cost": 0.18584,
+    "tokensIn": 22,
+    "tokensOut": 6191,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/gemini-3-1-pro.html",
+    "cost": 0.071698,
+    "tokensIn": 17,
+    "tokensOut": 5972,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "pac-man",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pac-man/claude-opus-4-8.html",
+    "cost": 0.198665,
+    "tokensIn": 33,
+    "tokensOut": 7940,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "pac-man",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pac-man/gpt-5-5.html",
+    "cost": 0.24632,
+    "tokensIn": 22,
+    "tokensOut": 8207,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "pac-man",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pac-man/gemini-3-1-pro.html",
+    "cost": 0.08892,
+    "tokensIn": 18,
+    "tokensOut": 7407,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "missile-command",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/missile-command/claude-opus-4-8.html",
+    "cost": 0.13386,
+    "tokensIn": 32,
+    "tokensOut": 5348,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "missile-command",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/missile-command/gpt-5-5.html",
+    "cost": 0.28409,
+    "tokensIn": 22,
+    "tokensOut": 9466,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "missile-command",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/missile-command/gemini-3-1-pro.html",
+    "cost": 0.070786,
+    "tokensIn": 17,
+    "tokensOut": 5896,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "frogger",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/frogger/claude-opus-4-8.html",
+    "cost": 0.14403,
+    "tokensIn": 31,
+    "tokensOut": 5755,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "frogger",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/frogger/gpt-5-5.html",
+    "cost": 0.23957,
+    "tokensIn": 22,
+    "tokensOut": 7982,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "frogger",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/frogger/gemini-3-1-pro.html",
+    "cost": 0.065374,
+    "tokensIn": 17,
+    "tokensOut": 5445,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "claude-opus-4-8",
+    "gameSlug": "tetris",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/tetris/claude-opus-4-8.html",
+    "cost": 0.16048,
+    "tokensIn": 31,
+    "tokensOut": 6413,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "gpt-5-5",
+    "gameSlug": "tetris",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/tetris/gpt-5-5.html",
+    "cost": 0.18371,
+    "tokensIn": 22,
+    "tokensOut": 6120,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "gemini-3-1-pro",
+    "gameSlug": "tetris",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/tetris/gemini-3-1-pro.html",
+    "cost": 0.065194,
+    "tokensIn": 17,
+    "tokensOut": 5430,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "pong",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pong/glm-5-2.html",
+    "cost": 0.0283101588,
+    "tokensIn": 28,
+    "tokensOut": 9905,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "snake",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/snake/glm-5-2.html",
+    "cost": 0.090691,
+    "tokensIn": 27,
+    "tokensOut": 8840,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "breakout",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/breakout/glm-5-2.html",
+    "cost": 0.06865066,
+    "tokensIn": 28,
+    "tokensOut": 24000,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "space-invaders",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/space-invaders/glm-5-2.html",
+    "cost": 0.03355797,
+    "tokensIn": 29,
+    "tokensOut": 11177,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "asteroids",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/asteroids/glm-5-2.html",
+    "cost": 0.0325592916,
+    "tokensIn": 28,
+    "tokensOut": 11393,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "pac-man",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/pac-man/glm-5-2.html",
+    "cost": 0.03491104,
+    "tokensIn": 28,
+    "tokensOut": 8808,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "missile-command",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/missile-command/glm-5-2.html",
+    "cost": 0.04905582,
+    "tokensIn": 28,
+    "tokensOut": 11141,
+    "status": "ok"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "frogger",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/frogger/glm-5-2.html",
+    "cost": 0.0602796,
+    "tokensIn": 28,
+    "tokensOut": 13691,
+    "status": "broken"
+  },
+  {
+    "modelSlug": "glm-5-2",
+    "gameSlug": "tetris",
+    "sampleIndex": 0,
+    "artifactPath": "/artifacts/tetris/glm-5-2.html",
+    "cost": 0.030951518,
+    "tokensIn": 28,
+    "tokensOut": 10819,
+    "status": "ok"
+  }
+]
