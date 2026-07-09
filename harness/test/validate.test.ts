@@ -84,6 +84,65 @@ describe("validateSelfContained", () => {
     expect(res.violations.some((v) => v.includes("@import external URL"))).toBe(true);
   });
 
+  it("flags a relative <script src>", () => {
+    const html = `<html><head><script src="script.js"></script></head></html>`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(false);
+    expect(res.violations.some((v) => v.includes("external <script src>: script.js"))).toBe(true);
+  });
+
+  it("flags a relative stylesheet <link href>", () => {
+    const html = `<link rel="stylesheet" href="style.css">`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(false);
+    expect(res.violations.some((v) => v.includes("external stylesheet <link href>: style.css"))).toBe(true);
+  });
+
+  it("flags a relative <img src>", () => {
+    const html = `<img src="./assets/sprite.png">`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(false);
+    expect(res.violations.some((v) => v.includes("relative <img src>"))).toBe(true);
+  });
+
+  it("flags a relative CSS @import", () => {
+    const html = `<style>@import url("theme.css");</style>`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(false);
+    expect(res.violations.some((v) => v.includes("@import relative file: theme.css"))).toBe(true);
+  });
+
+  it("allows a data: URI <img src>", () => {
+    const html = `<img src="data:image/png;base64,iVBORw0KGgo=">`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(true);
+    expect(res.violations).toEqual([]);
+  });
+
+  it("allows a blob: URI <img src> and <script src>", () => {
+    const html =
+      `<img src="blob:null/1234-5678">` +
+      `<script src="blob:null/abcd-efgh"></script>`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(true);
+    expect(res.violations).toEqual([]);
+  });
+
+  it("allows a fragment-only <img src> (inline SVG reference)", () => {
+    const html = `<img src="#sprite">`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(true);
+  });
+
+  it("allows inline <script> and <style> content", () => {
+    const html =
+      `<style>body { background: #000; } canvas { display: block; }</style>` +
+      `<script>const c = document.querySelector("canvas");</script>`;
+    const res = validateSelfContained(html);
+    expect(res.ok).toBe(true);
+    expect(res.violations).toEqual([]);
+  });
+
   it("collects multiple violations at once", () => {
     const html =
       `<link rel="stylesheet" href="https://a.com/x.css">` +

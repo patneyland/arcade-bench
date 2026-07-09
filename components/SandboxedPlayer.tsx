@@ -300,7 +300,11 @@ export function SandboxedPlayer({
                 event.currentTarget.blur();
                 setRunId((n) => n + 1);
               }}
-              className="btn pointer-events-auto rounded-chip bg-surface px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink shadow-hard-sm"
+              // Tap-target fix (docs/ux-overhaul.md §2): the visual chip stays
+              // compact (~27px), but on coarse pointers an invisible ::before
+              // extends the hit area past 40px tall. Pointer-only — desktop
+              // layout and the overlay's footprint on the game are unchanged.
+              className="btn pointer-events-auto relative rounded-chip bg-surface px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-ink shadow-hard-sm coarse:before:absolute coarse:before:-inset-y-2.5 coarse:before:inset-x-0 coarse:before:content-['']"
             >
               ↻ Restart
             </button>

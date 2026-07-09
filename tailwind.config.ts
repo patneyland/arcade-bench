@@ -42,6 +42,13 @@ const config: Config = {
         "hard-sm": "3px 3px 0 #1B1A22",
       },
       maxWidth: { container: "1120px" },
+      // `coarse:` variant — styles that apply only on touch-primary devices
+      // (pointer capability, NOT a width breakpoint; the 768px tablet layout
+      // must stay untouched). Used to grow tap targets to ≥40px without
+      // inflating the desktop layout (docs/ux-overhaul.md §2).
+      screens: {
+        coarse: { raw: "(pointer: coarse)" },
+      },
     },
   },
   plugins: [],

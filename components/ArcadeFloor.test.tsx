@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent, within } from "@testing-library/react";
 import type { ArcadeEntry } from "@/lib/types";
 import { ArcadeFloor } from "./ArcadeFloor";
@@ -111,6 +111,35 @@ describe("ArcadeFloor", () => {
     expect(document.body.style.overflow).toBe("hidden");
     fireEvent.click(getByRole("button", { name: /close/i }));
     expect(document.body.style.overflow).toBe("");
+  });
+
+  // Coarse-pointer framing (docs/ux-overhaul.md §2): touch visitors get the
+  // page-level "best played on desktop" note in the play window; fine-pointer
+  // (and SSR, where matchMedia is absent) render is unchanged.
+  it("shows the 'best played on desktop' framing in the play window on coarse pointers", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        media: "(pointer: coarse)",
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }),
+    );
+    try {
+      const { getByRole } = renderFloor();
+      fireEvent.click(getByRole("button", { name: /insert coin/i }));
+      const note = within(getByRole("dialog")).getByRole("note");
+      expect(note).toHaveTextContent(/best played on desktop/i);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("shows no coarse-pointer framing on fine-pointer devices", () => {
+    const { getByRole, queryByRole } = renderFloor();
+    fireEvent.click(getByRole("button", { name: /insert coin/i }));
+    expect(queryByRole("note")).toBeNull();
   });
 
   it("shows the locked prompt behind the window's PROMPT tab", () => {

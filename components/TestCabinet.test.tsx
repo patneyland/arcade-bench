@@ -156,6 +156,30 @@ describe("TestCabinet", () => {
     await waitFor(() => expect(getByText(/1 vote so far/i)).toBeInTheDocument());
   });
 
+  // Coarse-pointer framing (docs/ux-overhaul.md §2): testers on touch devices get
+  // the page-level "best played on desktop" note under the marquee; fine-pointer
+  // devices (jsdom default: no matchMedia) render no note.
+  it("shows the 'best played on desktop' framing under the marquee on coarse pointers", () => {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockReturnValue({
+        matches: true,
+        media: "(pointer: coarse)",
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }),
+    );
+    const { getByRole } = render(<TestCabinet initial={candidate} />);
+    const note = getByRole("note");
+    expect(note).toHaveTextContent(/best played on desktop/i);
+    expect(note).toHaveTextContent(/screen builds and cast your verdict/i);
+  });
+
+  it("shows no coarse-pointer framing on fine-pointer devices", () => {
+    const { queryByRole } = render(<TestCabinet initial={candidate} />);
+    expect(queryByRole("note")).toBeNull();
+  });
+
   it("shows a game-specific empty state (and keeps the picker) when a game's queue is exhausted", () => {
     const { getByText, getByRole } = render(
       <TestCabinet initial={null} games={GAMES} initialGame="pong" />,
