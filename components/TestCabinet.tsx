@@ -22,6 +22,7 @@ import { LOCKED_PROMPT } from "@/lib/constants";
 import { SandboxedPlayer } from "./SandboxedPlayer";
 import { PromptTab } from "./PromptTab";
 import { TestVerdict } from "./TestVerdict";
+import { DesktopPlayNote } from "./DesktopPlayNote";
 import { ButtonLink } from "./Button";
 
 export function TestCabinet({
@@ -112,6 +113,9 @@ export function TestCabinet({
             {candidate.votes} vote{candidate.votes === 1 ? "" : "s"} so far
           </span>
         </div>
+
+        {/* Coarse-pointer framing (page-level copy only — never inside the frame). */}
+        <DesktopPlayNote>you can still screen builds and cast your verdict</DesktopPlayNote>
 
         {/* Stage: hidden (not unmounted) during the verdict so the run survives
             "go back and play more". Keyed per candidate for a fresh coin screen. */}
@@ -226,7 +230,9 @@ function PickerTab({
       disabled={disabled}
       aria-current={active ? "true" : undefined}
       className={clsx(
-        "inline-flex items-baseline rounded-chip border-2 border-ink px-3 py-1.5 font-grotesk text-[13px] font-semibold transition-colors disabled:cursor-default disabled:opacity-60",
+        // coarse:min-h — picker chips are ~32px tall; grow the tap target to 44px
+        // on touch devices only (docs/ux-overhaul.md §2), desktop stays compact.
+        "inline-flex items-baseline rounded-chip border-2 border-ink px-3 py-1.5 font-grotesk text-[13px] font-semibold transition-colors disabled:cursor-default disabled:opacity-60 coarse:min-h-[44px] coarse:items-center",
         active
           ? "bg-ink text-cream shadow-hard-sm"
           : "bg-surface text-ink hover:bg-cream-2",

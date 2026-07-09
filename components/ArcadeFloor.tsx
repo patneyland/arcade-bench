@@ -14,6 +14,7 @@ import type { ArcadeEntry, GameView } from "@/lib/types";
 import { LOCKED_PROMPT, VENDOR_COLORS } from "@/lib/constants";
 import { SandboxedPlayer } from "./SandboxedPlayer";
 import { PromptTab } from "./PromptTab";
+import { DesktopPlayNote } from "./DesktopPlayNote";
 import { CostChip, ParamChip, TokenChip, VendorBadge, formatTokens } from "./Badges";
 import { CertifiedChip } from "./ArcadeCabinet";
 import { PlayIcon } from "./icons";
@@ -185,11 +186,16 @@ export function PlayWindow({ entry, onClose }: { entry: ArcadeEntry; onClose: ()
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className="btn ml-auto rounded-chip border-cream bg-transparent px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-cream hover:border-yellow hover:bg-yellow hover:text-ink"
+            // coarse:min-h grows the tap target past 40px on touch devices only
+            // (docs/ux-overhaul.md §2) — desktop keeps the compact chip.
+            className="btn ml-auto rounded-chip border-cream bg-transparent px-2.5 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.08em] text-cream hover:border-yellow hover:bg-yellow hover:text-ink coarse:min-h-[44px] coarse:min-w-[44px]"
           >
             ✕ Close
           </button>
         </div>
+
+        {/* Coarse-pointer framing (page-level copy only — never inside the frame). */}
+        <DesktopPlayNote>you can still browse the arcade and try every build</DesktopPlayNote>
 
         {/* The stage: same shared player, strict sandbox, coin already dropped. */}
         <div className="p-4">

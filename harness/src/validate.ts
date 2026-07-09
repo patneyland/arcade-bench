@@ -3,13 +3,16 @@
  * with no external dependencies or network access.
  *
  * Flags:
- *   - external <script src="http..."> / protocol-relative //
- *   - external <link rel="stylesheet" href="http...">
- *   - <img src="http..."> (remote images)
+ *   - ANY <script src="..."> that is not a data:/blob: URI (remote AND relative files)
+ *   - ANY <link rel="stylesheet" href="..."> that is not a data:/blob: URI
+ *   - <img src="..."> pointing at a remote URL or a relative file
  *   - fetch( / XMLHttpRequest / WebSocket / dynamic import() from a URL
- *   - @import url(http...) in CSS
+ *   - @import in CSS pointing at a remote URL or a relative file
  *
- * Inline content and data: URIs are fine and never flagged.
+ * Inline content, data:/blob: URIs, and fragment-only (#...) references are
+ * fine and never flagged. A self-contained artifact has no business referencing
+ * any external file — even a relative one like "style.css" (it won't exist next
+ * to the artifact and produces a blank page).
  */
 
 export interface ValidationResult {
@@ -23,32 +26,50 @@ function isExternalUrl(url: string): boolean {
   return /^https?:\/\//i.test(u) || /^\/\//.test(u);
 }
 
+/**
+ * True if a URL string references a file at all — remote OR relative/absolute
+ * path. Only self-contained references are exempt: data: URIs, blob: URIs,
+ * fragment-only refs (#id), and empty strings.
+ */
+function isFileReference(url: string): boolean {
+  const u = url.trim();
+  if (u === "") return false;
+  if (/^(data|blob):/i.test(u)) return false;
+  if (u.startsWith("#")) return false;
+  return true;
+}
+
 export function validateSelfContained(html: string): ValidationResult {
   const violations: string[] = [];
 
-  // External <script src="...">
+  // <script src="..."> — any file reference (remote or relative) is a violation
   const scriptSrcRe = /<script\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
   for (const m of html.matchAll(scriptSrcRe)) {
     const url = m[1] ?? "";
-    if (isExternalUrl(url)) violations.push(`external <script src>: ${url}`);
+    if (isFileReference(url)) violations.push(`external <script src>: ${url}`);
   }
 
-  // External stylesheet <link rel="stylesheet" href="...">
+  // <link rel="stylesheet" href="..."> — any file reference is a violation
   const linkRe = /<link\b[^>]*>/gi;
   for (const m of html.matchAll(linkRe)) {
     const tag = m[0];
     if (/rel\s*=\s*["'][^"']*stylesheet[^"']*["']/i.test(tag)) {
       const hrefMatch = /href\s*=\s*["']([^"']+)["']/i.exec(tag);
       const url = hrefMatch?.[1] ?? "";
-      if (isExternalUrl(url)) violations.push(`external stylesheet <link href>: ${url}`);
+      if (isFileReference(url)) violations.push(`external stylesheet <link href>: ${url}`);
     }
   }
 
-  // Remote <img src="http...">
+  // <img src="..."> — remote URLs and relative file references are violations
+  // (data:/blob: URIs and fragment-only refs stay valid)
   const imgRe = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
   for (const m of html.matchAll(imgRe)) {
     const url = m[1] ?? "";
-    if (isExternalUrl(url)) violations.push(`remote <img src>: ${url}`);
+    if (isExternalUrl(url)) {
+      violations.push(`remote <img src>: ${url}`);
+    } else if (isFileReference(url)) {
+      violations.push(`relative <img src>: ${url}`);
+    }
   }
 
   // fetch(...) network calls
@@ -73,11 +94,15 @@ export function validateSelfContained(html: string): ValidationResult {
     if (isExternalUrl(url)) violations.push(`dynamic import from URL: ${url}`);
   }
 
-  // CSS @import url(http...)
+  // CSS @import — remote URLs and relative file references are violations
   const cssImportRe = /@import\s+(?:url\(\s*)?["']?([^"')\s]+)["']?\s*\)?/gi;
   for (const m of html.matchAll(cssImportRe)) {
     const url = m[1] ?? "";
-    if (isExternalUrl(url)) violations.push(`@import external URL: ${url}`);
+    if (isExternalUrl(url)) {
+      violations.push(`@import external URL: ${url}`);
+    } else if (isFileReference(url)) {
+      violations.push(`@import relative file: ${url}`);
+    }
   }
 
   return { ok: violations.length === 0, violations };

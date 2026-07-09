@@ -194,7 +194,9 @@ export function TestVerdict({
             <button
               type="button"
               onClick={onBack}
-              className="font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft underline underline-offset-4 hover:text-ink"
+              // No background/border, so coarse-pointer padding + negative margin
+              // grows the tap target past 40px invisibly (docs/ux-overhaul.md §2).
+              className="font-mono text-[12px] uppercase tracking-[0.16em] text-ink-soft underline underline-offset-4 hover:text-ink coarse:-m-3.5 coarse:p-3.5"
             >
               ↩ go back and play more
             </button>

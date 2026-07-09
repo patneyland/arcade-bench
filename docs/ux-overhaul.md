@@ -15,11 +15,17 @@
 - [x] **1. Arena rebuild** — shipped 2026-07-02: one-cabinet session flow
   (coin → play A → play B → verdict → reveal → next round), 820×700
   virtual-viewport scaling, intro block deleted, slim mobile CTA row.
-- [ ] 2. Mobile triage — PARTIAL. Done: sticky vote monster replaced by the flow's
-  slim CTA row; nav page links below 768px; leaderboard mobile columns
-  (#/Model/Rating-¢); about locked-prompt wrap. Remaining: coarse-pointer
-  "best played on desktop" framing; tap-target audit of the new overlay Restart
-  chip; verify the new marquee's meta line at 390px.
+- [x] 2. Mobile triage — completed 2026-07-09: coarse-pointer "best played on
+  desktop" framing (`useCoarsePointer` + `DesktopPlayNote`, pointer-capability
+  based via a `coarse:` Tailwind screen — NOT a width breakpoint, tablet 768
+  untouched) on the arcade PlayWindow and Test Lab; tap-target audit done
+  (Restart chip 27→42px hit area on touch, PlayWindow ✕ 44px, picker chips
+  44px, verdict "go back" link ~43px — visual sizes unchanged on desktop);
+  marquee meta line at 390px verified NOT broken (live screenshot — one clean
+  line, no fix needed). Tie/Both-bad buttons live in the parked /arena VoteBar
+  and were left alone. Live Playwright pass at 390 (iPhone 12, real coarse
+  pointer) + 1440; signed-in /test blocked by Clerk Turnstile — covered by the
+  same shared components + unit tests, worth one manual phone glance.
 - [x] 3. Home page restructure — shipped 2026-07-02: playable teaser in the fold,
   vote-CTA bridge instead of the duplicate arena, slimmed sections (~1650px page).
 - [x] 4. Leaderboard credibility pass — shipped 2026-07-02: efficiency-column
@@ -28,7 +34,24 @@
 - [x] 5. History page — shipped 2026-07-02: clickable Live/Now nodes, 1952/present
   track anchors, expanded cards on /history, honest copy, mobile auto-center.
   (Reference thumbnails / champion-per-game deferred: data not in TimelineEntry.)
-- [ ] 6. Pipeline/data fixes (broken artifacts reaching voters)
+- [ ] 6. Pipeline/data fixes — PARTIAL (2026-07-09). Done: harness validator
+  now flags ANY `<script src>` / stylesheet `<link href>` file reference —
+  relative paths included, the exact gap that let the blank gemma-3-4b builds
+  through (`data:`/`blob:`/`#fragment` stay valid; relative `<img src>` and CSS
+  `@import` also flagged). Sweep of all 66 artifacts: the new rules catch
+  breakout/gemma-3-4b AND asteroids/gemma-3-4b (same relative style.css/script.js
+  pattern); 9 artifacts were already failing the OLD rules via remote Google
+  Fonts (all 7 glm-5-2 builds + 2 gemini-flash-lite) — they render fine (sandbox
+  blocks the fetch, fallback fonts) but the harness stored them despite
+  validation failures — root cause confirmed: `harness/src/pipeline.ts` only
+  LOGS validation violations; status comes solely from the smoke test, so
+  validation never gates storage. Deciding how it should gate is a product
+  call (a hard fail would also flag the 9 playable fonts-only builds — maybe
+  validation-fail → `broken` only when the smoke test can't prove playability,
+  or a violation whitelist for blocked-anyway font fetches). Remaining: that
+  gating decision + wiring; regenerate/exclude the broken
+  builds (both gemma-3-4b + snake/qwen3-8b black-on-black) with status `broken`;
+  confirm getArenaPairing "now"-game-only behavior is intended.
 - [x] **7. PRODUCT PIVOT: playability screening** — shipped 2026-07-02: Arcade
   (/arcade, certified builds only), Test Lab (/test, signed-in screening),
   PlayabilityVote + API routes + seed, leaderboard Playable column; /arena parked
@@ -50,10 +73,10 @@
   cross-origin game frame — browser constraint). Home teaser keeps the big
   playable ArcadeCabinet. 125 tests green + live Playwright pass at 1440/390.
 
-> Post-ship note: all of the above verified by tests + `next build` only — Docker
-> was down, so no live visual pass yet. First session with the local stack up:
-> visually verify the new arena flow, home teaser fold, and 390px states before
-> starting item 2's remainder.
+> Post-ship note — RESOLVED 2026-07-09: 7b got a live Playwright pass when it
+> shipped, and item 2's completion pass re-verified /arcade, the play window,
+> and /arena's marquee live at 390 and 1440. The "home teaser fold" part is
+> moot: home now redirects to /arcade (PR #9).
 
 ---
 
