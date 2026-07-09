@@ -120,13 +120,18 @@ export function TestCabinet({
         {/* Stage: hidden (not unmounted) during the verdict so the run survives
             "go back and play more". Keyed per candidate for a fresh coin screen. */}
         <div hidden={step !== "play"} className="p-4 sm:p-5">
-          {/* max-w keeps the 7:6 stage under ~62vh so stage + CTA share the viewport. */}
-          <div className="mx-auto w-full max-w-[calc(62vh*7/6)]">
+          {/* max-w keeps the stage under ~62vh tall at the build's own aspect
+              ratio (candidate.viewport) so stage + CTA share the viewport. */}
+          <div
+            className="mx-auto w-full"
+            style={{ maxWidth: `calc(62vh * ${stageRatio(candidate.viewport)})` }}
+          >
             <SandboxedPlayer
               key={candidate.generationId}
               artifactPath={candidate.artifactPath}
               title={`Unvetted build — ${game.title}`}
               accent="blue"
+              viewport={candidate.viewport}
               onStarted={() => setStarted(true)}
             />
           </div>
@@ -173,6 +178,13 @@ export function TestCabinet({
       </div>
     </div>
   );
+}
+
+/** Width/height of a build's measured viewport as a CSS-safe ratio string
+ *  (820×700 default when unmeasured). */
+function stageRatio(viewport?: { width: number; height: number }): string {
+  const { width, height } = viewport ?? { width: 820, height: 700 };
+  return (width / height).toFixed(4);
 }
 
 /** The game filter: "All games" plus one chip per screenable game. Buttons (not links)

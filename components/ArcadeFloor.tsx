@@ -136,6 +136,14 @@ export function PlayWindow({ entry, onClose }: { entry: ArcadeEntry; onClose: ()
   const { game, model } = entry;
   const vendorColor = VENDOR_COLORS[model.vendor] ?? "#57545F";
   const closeRef = useRef<HTMLButtonElement>(null);
+  // The window is shaped by the build it hosts: the stage takes the artifact's
+  // measured aspect ratio (capped at ~66vh tall so header + stage + strips share
+  // the viewport) and the dialog hugs the stage — portrait builds (frogger) get a
+  // narrow window, wide builds a broad one, instead of one fixed 7:6 box.
+  const { width: vw, height: vh } = entry.viewport ?? { width: 820, height: 700 };
+  const ratio = (vw / vh).toFixed(4);
+  // stage + p-4 padding (2rem) + dialog borders (4px), clamped to sane bounds.
+  const windowMax = `clamp(360px, calc(66vh * ${ratio} + 2rem + 4px), 1100px)`;
 
   // The window owns the page scroll lock while open. The player's own lock/unlock
   // (on focus moves) saves and restores THIS "hidden" state, so the two compose.
@@ -173,7 +181,8 @@ export function PlayWindow({ entry, onClose }: { entry: ArcadeEntry; onClose: ()
         role="dialog"
         aria-modal="true"
         aria-label={`${game.title} — ${model.name}`}
-        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[860px] flex-col overflow-y-auto rounded-[14px] border-2 border-ink bg-surface shadow-[8px_8px_0_#1B1A22]"
+        className="flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-y-auto rounded-[14px] border-2 border-ink bg-surface shadow-[8px_8px_0_#1B1A22]"
+        style={{ maxWidth: windowMax }}
       >
         {/* Marquee header: game + model identity + close. */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 border-ink bg-ink px-4 py-3">
@@ -199,11 +208,13 @@ export function PlayWindow({ entry, onClose }: { entry: ArcadeEntry; onClose: ()
 
         {/* The stage: same shared player, strict sandbox, coin already dropped. */}
         <div className="p-4">
-          <div className="mx-auto w-full max-w-[calc(66vh*7/6)]">
+          {/* max-w keeps the stage under ~66vh tall at its own aspect ratio. */}
+          <div className="mx-auto w-full" style={{ maxWidth: `calc(66vh * ${ratio})` }}>
             <SandboxedPlayer
               key={entry.generationId}
               artifactPath={entry.artifactPath}
               title={`${game.title} — ${model.name}`}
+              viewport={entry.viewport}
               autoStart
             />
           </div>

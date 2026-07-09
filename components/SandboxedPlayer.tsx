@@ -13,11 +13,15 @@
 // does NOT contain `allow-same-origin`, so a regression here fails CI.
 //
 // Virtual viewport (docs/ux-overhaul.md §1 — the rating-integrity fix): the iframe
-// always renders at a fixed 820×700 CSS px (bigger than the worst native artifact
-// size in the corpus, 808×688) and is scaled DOWN to fit its frame with a CSS
+// renders at a fixed CSS-px size and is scaled DOWN to fit its frame with a CSS
 // transform on the iframe element itself. Pointer coordinates remap through
 // transforms automatically and keyboard focus is unaffected, so nothing about the
 // sandbox or the artifact changes — voters just stop penalizing a clipped viewport.
+// The size is per-artifact (the `viewport` prop, measured offline by the harness
+// sweep — see lib/artifact-viewports.ts; the sandbox makes runtime measurement
+// impossible), defaulting to 820×700. The frame itself takes the artifact's aspect
+// ratio, so tall builds (frogger) get a portrait stage instead of scrolling inside
+// a landscape one.
 //
 // Playability layer (all app-side; the artifact HTML is never modified):
 // - INSERT COIN gate: the iframe is not mounted until the player clicks, so games
@@ -37,7 +41,7 @@ import { PlayIcon } from "./icons";
 
 const SANDBOX = "allow-scripts";
 
-/** Fixed virtual viewport every artifact renders into before being scaled to fit. */
+/** Default virtual viewport for artifacts without a measured size. */
 const VIRTUAL_W = 820;
 const VIRTUAL_H = 700;
 const SCROLL_KEYS = new Set([
@@ -105,6 +109,10 @@ export interface SandboxedPlayerProps {
    *  window) — the gate's job is "no game runs before someone is looking", and
    *  that click satisfies it. Focus/scroll-lock handoff still runs on load. */
   autoStart?: boolean;
+  /** The artifact's measured natural size (lib/artifact-viewports.ts). Sets both
+   *  the virtual viewport the game renders into and the frame's aspect ratio.
+   *  Defaults to 820×700. */
+  viewport?: { width: number; height: number };
 }
 
 type Fit = { scale: number; x: number; y: number };
@@ -116,7 +124,10 @@ export function SandboxedPlayer({
   accent = "blue",
   onStarted,
   autoStart = false,
+  viewport,
 }: SandboxedPlayerProps) {
+  const virtualW = viewport?.width ?? VIRTUAL_W;
+  const virtualH = viewport?.height ?? VIRTUAL_H;
   const [started, setStarted] = useState(autoStart);
   const [runId, setRunId] = useState(0);
   // autoStart skips the gate click that normally reports the start — fire it once here.
@@ -158,18 +169,18 @@ export function SandboxedPlayer({
     unlockPageScroll(playerIdRef.current);
   };
 
-  // Measure the frame box and fit the 820×700 virtual viewport into it, centered.
+  // Measure the frame box and fit the virtual viewport into it, centered.
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
     const measure = () => {
       const { width, height } = box.getBoundingClientRect();
       if (width <= 0 || height <= 0) return; // hidden or non-browser env — keep last fit
-      const scale = Math.min(width / VIRTUAL_W, height / VIRTUAL_H);
+      const scale = Math.min(width / virtualW, height / virtualH);
       setFit({
         scale,
-        x: (width - VIRTUAL_W * scale) / 2,
-        y: (height - VIRTUAL_H * scale) / 2,
+        x: (width - virtualW * scale) / 2,
+        y: (height - virtualH * scale) / 2,
       });
     };
     measure();
@@ -177,7 +188,7 @@ export function SandboxedPlayer({
     const ro = new ResizeObserver(measure);
     ro.observe(box);
     return () => ro.disconnect();
-  }, []);
+  }, [virtualW, virtualH]);
 
   // Focus moving into/out of a cross-origin iframe doesn't fire DOM events the parent
   // can subscribe to reliably, so poll activeElement while the game is running.
@@ -256,6 +267,9 @@ export function SandboxedPlayer({
         focused && (accent === "red" ? "ring-[3px] ring-red" : "ring-[3px] ring-blue"),
         className,
       )}
+      // The frame takes the artifact's shape (overrides .game-canvas's 7:6 default)
+      // so tall/wide builds fill their stage instead of letterboxing inside it.
+      style={{ aspectRatio: `${virtualW} / ${virtualH}` }}
     >
       {started ? (
         <>
@@ -279,11 +293,11 @@ export function SandboxedPlayer({
               activePlayerId = playerIdRef.current;
             }}
             onBlur={() => setFocused(false)}
-            // Fixed 820×700 virtual viewport, scaled to fit and centered in the frame.
-            // The transform remaps pointer coordinates automatically.
+            // Fixed per-artifact virtual viewport, scaled to fit and centered in
+            // the frame. The transform remaps pointer coordinates automatically.
             style={{
-              width: VIRTUAL_W,
-              height: VIRTUAL_H,
+              width: virtualW,
+              height: virtualH,
               transform: `translate(${fit.x}px, ${fit.y}px) scale(${fit.scale})`,
               transformOrigin: "top left",
             }}

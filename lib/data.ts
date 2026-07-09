@@ -8,6 +8,7 @@ import { prisma } from "./db";
 import { getSessionUser } from "./auth";
 import { rateLimit } from "./rate-limit";
 import { recomputeAndStore } from "./rating/recompute";
+import { artifactViewport } from "./artifact-viewports";
 import { CERTIFIED_PLAYABLE_PCT, VENDOR_COLORS, VOTE_WINNERS } from "./constants";
 import type { CostTier, GameStatus, GenerationStatus } from "./constants";
 import type {
@@ -172,12 +173,14 @@ export async function getArenaPairing(
     generationId: ga.id,
     artifactPath: ga.artifactPath,
     status: ga.status as GenerationStatus,
+    viewport: artifactViewport(ga.artifactPath),
     // model intentionally omitted — revealed only after a successful vote.
   };
   const b: ArenaBuild = {
     generationId: gb.id,
     artifactPath: gb.artifactPath,
     status: gb.status as GenerationStatus,
+    viewport: artifactViewport(gb.artifactPath),
   };
 
   return { game: toGameView(game), roundOf: totalGames, a, b };
@@ -448,6 +451,7 @@ export async function getArcade(): Promise<ArcadeEntry[]> {
       playablePct,
       votes: g.playabilityVotes.length,
       tokensOut: g.tokensOut,
+      viewport: artifactViewport(g.artifactPath),
     });
   }
 
@@ -506,6 +510,7 @@ export async function getNextTestCandidate(
     artifactPath: gen.artifactPath,
     game: toGameView(gen.game),
     votes: gen._count.playabilityVotes,
+    viewport: artifactViewport(gen.artifactPath),
     // model intentionally omitted — revealed only after the playability verdict.
   };
 }

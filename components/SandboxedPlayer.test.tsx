@@ -81,15 +81,28 @@ describe("SandboxedPlayer", () => {
   });
 
   // VIRTUAL VIEWPORT (docs/ux-overhaul.md §1, the rating-integrity fix): the iframe
-  // always renders at a fixed 820×700 and is scaled to fit with a transform on the
-  // iframe element — the artifact never sees a clipped viewport.
-  it("renders the iframe at the fixed 820×700 virtual viewport, scaled via transform", () => {
+  // renders at a fixed size and is scaled to fit with a transform on the iframe
+  // element — the artifact never sees a clipped viewport. 820×700 is the default
+  // for builds without a measured size.
+  it("renders the iframe at the default 820×700 virtual viewport, scaled via transform", () => {
     const { container } = renderStarted();
     const iframe = container.querySelector("iframe") as HTMLIFrameElement;
     expect(iframe.style.width).toBe("820px");
     expect(iframe.style.height).toBe("700px");
     expect(iframe.style.transformOrigin).toBe("top left");
     expect(iframe.style.transform).toContain("scale(");
+  });
+
+  // PER-ARTIFACT VIEWPORT: a measured build renders its virtual viewport at its
+  // exact natural size (so tall frogger builds never scroll inside the frame) and
+  // the frame takes the artifact's aspect ratio instead of the 7:6 default.
+  it("renders a measured build at its own viewport size and matches the frame aspect", () => {
+    const { container } = renderStarted({ viewport: { width: 1024, height: 811 } });
+    const iframe = container.querySelector("iframe") as HTMLIFrameElement;
+    expect(iframe.style.width).toBe("1024px");
+    expect(iframe.style.height).toBe("811px");
+    const frame = container.querySelector(".game-canvas") as HTMLElement;
+    expect(frame.style.aspectRatio).toBe("1024 / 811");
   });
 
   it("offers a Restart control that keeps the same strict sandbox and virtual viewport", () => {

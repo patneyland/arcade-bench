@@ -6,6 +6,16 @@ import type { VoteWinner, CostTier, GameStatus, GenerationStatus } from "./const
 
 export type { VoteWinner, CostTier, GameStatus, GenerationStatus };
 
+/** Natural content size of an artifact, measured by the harness sweep
+ *  (data/artifact-viewports.json). The SandboxedPlayer renders its virtual
+ *  viewport at exactly this size so tall/wide builds (frogger) never scroll
+ *  inside their frame. Optional on view models so hand-built fixtures keep
+ *  compiling; absent means the 820×700 default. */
+export interface ArtifactViewport {
+  width: number;
+  height: number;
+}
+
 export interface VendorBadge {
   vendor: string;
   color: string; // hex from VENDOR_COLORS
@@ -42,6 +52,8 @@ export interface ArenaBuild {
   generationId: string;
   artifactPath: string;
   status: GenerationStatus;
+  /** Measured natural size of the build (default 820×700 when absent). */
+  viewport?: ArtifactViewport;
   // Revealed only after voting (kept out of the initial payload in production):
   model?: ModelView;
 }
@@ -119,6 +131,8 @@ export interface ArcadeEntry {
   // Tokens the model spent writing this exact build (Generation.tokensOut) —
   // shown on the arcade thumbnail's coin gate next to the param count.
   tokensOut: number;
+  /** Measured natural size of the build (default 820×700 when absent). */
+  viewport?: ArtifactViewport;
 }
 
 /** One build in the signed-in testing queue — model hidden until the vote. */
@@ -127,6 +141,8 @@ export interface TestCandidate {
   artifactPath: string;
   game: GameView;
   votes: number; // playability votes cast so far (by anyone)
+  /** Measured natural size of the build (default 820×700 when absent). */
+  viewport?: ArtifactViewport;
 }
 
 export interface RecordPlayabilityInput {

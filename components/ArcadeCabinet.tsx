@@ -34,6 +34,7 @@ export function ArcadeCabinet({
         <SandboxedPlayer
           artifactPath={entry.artifactPath}
           title={`${game.title} — ${model.name}`}
+          viewport={entry.viewport}
         />
       </div>
 

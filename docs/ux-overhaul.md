@@ -78,6 +78,27 @@
 > and /arena's marquee live at 390 and 1440. The "home teaser fold" part is
 > moot: home now redirects to /arcade (PR #9).
 
+- [x] **8. Per-artifact viewports + aspect-adaptive play window** — shipped
+  2026-07-09 (owner report: frogger builds scrolled inside their frame; the
+  pop-up window should adapt to each game's shape). The fixed 820×700 virtual
+  viewport (item 1) was sized to the then-worst artifact (808×688); frogger and
+  tetris builds exceed it, and the sandbox makes the frame unmeasurable at
+  runtime — so sizes are now measured OFFLINE: `harness/src/measure.ts`
+  (`npm run measure:viewports`) loads each artifact headless with the network
+  blocked, grows the viewport until the content fits (+16px slack for post-load
+  layout shifts), tries wider candidates when the narrow layout stacks tall
+  (glm's side panel), and writes `data/artifact-viewports.json` (tracked; 12 of
+  66 artifacts are non-default, up to 1024×1136). `lib/artifact-viewports.ts`
+  attaches a `viewport` to `ArcadeEntry`/`TestCandidate`/`ArenaBuild`;
+  SandboxedPlayer renders its virtual viewport at that exact size and the frame
+  takes the artifact's aspect ratio (inline `aspect-ratio` over the 7:6
+  default); the arcade PlayWindow, Test Lab, and (parked) arena stages cap the
+  stage at 66vh/62vh × the build's own ratio, and the PlayWindow dialog hugs
+  the stage (portrait window for portrait games, wide for glm's side-by-side).
+  Sandbox untouched. New-game protocol now includes the measurement sweep
+  (CLAUDE.md). 139 web + 77 harness tests green; live Playwright pass confirmed
+  zero inner scroll on all four frogger builds + tetris/glm at 1440×900.
+
 ---
 
 ## The critical finding (read this first)

@@ -6,7 +6,8 @@
   "description": "Offline generation harness for arcade-bench: model -> playable HTML artifact.",
   "scripts": {
     "test": "vitest run",
-    "generate": "tsx src/cli.ts"
+    "generate": "tsx src/cli.ts",
+    "measure": "tsx src/measure.ts"
   },
   "dependencies": {
     "openai": "^4.77.0",

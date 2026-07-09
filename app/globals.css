@@ -34,7 +34,8 @@
   }
 
   /* The dark game canvas frame (design.md §8): dark, 2px ink border, pixelated.
-     7:6 matches the 820×700 virtual viewport the SandboxedPlayer scales into
+     7:6 matches the default 820×700 virtual viewport; the SandboxedPlayer
+     overrides aspect-ratio inline with the artifact's measured shape
      (docs/ux-overhaul.md §1 — the rating-integrity fix). */
   .game-canvas {
     @apply relative w-full overflow-hidden rounded-chip border-2 border-ink bg-[#0B0B12];

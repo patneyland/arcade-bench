@@ -61,6 +61,11 @@ every new game MUST go through all of these steps:
    `public/artifacts/<game-slug>/<model-slug>.html` AND appends to
    `harness/out/manifest.json`. **Commit both** — the manifest is tracked in git
    on purpose; it is the input the DB sync reads.
+   Then run `npm run measure:viewports` (repo root) and commit the updated
+   `data/artifact-viewports.json` — the sweep records each build's natural
+   content size so the player can size its virtual viewport and frame (tall
+   builds like frogger would otherwise scroll inside the sandboxed iframe,
+   which cannot be measured at runtime).
 3. **Local DB**: `npm run db:sync` (additive `scripts/sync-roster.ts`; safe with
    real votes). Verify the game shows in the Test Lab picker at `/test`.
 4. **Production DB**: automatic — `npm run build` runs `db:sync` before

@@ -159,10 +159,16 @@ function StageFrame({
 }) {
   const build = side === "a" ? pairing.a : pairing.b;
   const label = side.toUpperCase();
+  const { width: vw, height: vh } = build.viewport ?? { width: 820, height: 700 };
   return (
     // Off-stage builds stay mounted but hidden — rAF throttling pauses their games.
-    // max-w keeps the 7:6 stage under ~62vh tall so stage + CTA share the viewport.
-    <div hidden={!onStage} className="mx-auto w-full max-w-[calc(62vh*7/6)]">
+    // max-w keeps the stage under ~62vh tall at the build's own aspect ratio, so
+    // stage + CTA share the viewport.
+    <div
+      hidden={!onStage}
+      className="mx-auto w-full"
+      style={{ maxWidth: `calc(62vh * ${(vw / vh).toFixed(4)})` }}
+    >
       <div className="mb-2 flex items-center gap-2">
         <span
           className={clsx(
@@ -177,6 +183,7 @@ function StageFrame({
         artifactPath={build.artifactPath}
         title={`Build ${label} — ${pairing.game.title}`}
         accent={side === "a" ? "blue" : "red"}
+        viewport={build.viewport}
         onStarted={onStarted}
       />
     </div>

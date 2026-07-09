@@ -1,0 +1,266 @@
+{
+  "/artifacts/asteroids/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/deepseek-v3.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/gemini-flash-lite.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/gemma-3-4b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/gpt-4-1-nano.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/gpt-5-5.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/ministral-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/asteroids/qwen3-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 727
+  },
+  "/artifacts/breakout/deepseek-v3.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/gemini-flash-lite.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/gemma-3-4b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/gpt-4-1-nano.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/gpt-5-5.html": {
+    "width": 820,
+    "height": 717
+  },
+  "/artifacts/breakout/ministral-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/breakout/qwen3-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/frogger/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 819
+  },
+  "/artifacts/frogger/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/frogger/glm-5-2.html": {
+    "width": 1024,
+    "height": 827
+  },
+  "/artifacts/frogger/gpt-5-5.html": {
+    "width": 820,
+    "height": 852
+  },
+  "/artifacts/missile-command/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/missile-command/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/missile-command/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/missile-command/gpt-5-5.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pac-man/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pac-man/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pac-man/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pac-man/gpt-5-5.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/deepseek-v3.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/gemini-flash-lite.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/gemma-3-4b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/gpt-4-1-nano.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/gpt-5-5.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/ministral-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/pong/qwen3-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/deepseek-v3.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/gemini-flash-lite.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/gemma-3-4b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/gpt-4-1-nano.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/gpt-5-5.html": {
+    "width": 820,
+    "height": 921
+  },
+  "/artifacts/snake/ministral-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/snake/qwen3-8b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/deepseek-v3.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/gemini-flash-lite.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/gemma-3-4b.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/glm-5-2.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/gpt-4-1-nano.html": {
+    "width": 820,
+    "height": 700
+  },
+  "/artifacts/space-invaders/gpt-5-5.html": {
+    "width": 820,
+    "height": 727
+  },
+  "/artifacts/space-invaders/ministral-8b.html": {
+    "width": 820,
+    "height": 718
+  },
+  "/artifacts/space-invaders/qwen3-8b.html": {
+    "width": 820,
+    "height": 734
+  },
+  "/artifacts/tetris/claude-opus-4-8.html": {
+    "width": 820,
+    "height": 805
+  },
+  "/artifacts/tetris/gemini-3-1-pro.html": {
+    "width": 820,
+    "height": 847
+  },
+  "/artifacts/tetris/glm-5-2.html": {
+    "width": 1024,
+    "height": 1136
+  },
+  "/artifacts/tetris/gpt-5-5.html": {
+    "width": 820,
+    "height": 700
+  }
+}
